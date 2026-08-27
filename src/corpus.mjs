@@ -7,7 +7,7 @@ import {
   resolveCategory,
   selectMinutesFile,
 } from './civicclerk.mjs';
-import { readCivicClerkAttachment } from './document-reader.mjs';
+import { readCivicClerkAttachment, readCivicClerkMeetingFile } from './document-reader.mjs';
 import { listEventsRange } from './event-range.mjs';
 
 export const CORPUS_SCHEMA_VERSION = 1;
@@ -40,11 +40,11 @@ async function mapLimit(items, limit, worker) {
   return results;
 }
 
-function sourceFileRecord(event, file, minutesText, error = null) {
+function minutesBase(tenant, event, file) {
   return {
     id: documentId(event.id, 'meeting-file', file.fileId),
     kind: 'minutes',
-    tenant: 'mitchellsd',
+    tenant,
     body: event.categoryName || null,
     meetingDate: event.date || null,
     meetingName: event.name || null,
@@ -56,21 +56,67 @@ function sourceFileRecord(event, file, minutesText, error = null) {
     agendaItemName: null,
     fileName: file.name || null,
     sourceType: file.type || null,
-    sourcePath: `/v1/Meetings/GetMeetingFileStream(fileId=${file.fileId},plainText=true)`,
-    status: error ? 'read_failed' : (minutesText ? 'text_extracted' : 'no_usable_text'),
-    pageCount: null,
-    characters: minutesText?.length || 0,
-    sha256: null,
-    text: minutesText || '',
-    error,
   };
 }
 
-function attachmentBase(event, item, attachment) {
+async function indexMinutesFile(tenant, event, file) {
+  const base = minutesBase(tenant, event, file);
+  let plainTextError = null;
+  try {
+    const text = await getMeetingFileText(tenant, file.fileId);
+    if (text) {
+      return {
+        ...base,
+        sourcePath: `/v1/Meetings/GetMeetingFileStream(fileId=${file.fileId},plainText=true)`,
+        readMethod: 'civicclerk_plaintext',
+        status: 'text_extracted',
+        pageCount: null,
+        characters: text.length,
+        sha256: null,
+        text,
+        error: null,
+        plainTextError: null,
+      };
+    }
+  } catch (error) {
+    plainTextError = compactError(error);
+  }
+
+  try {
+    const parsed = await readCivicClerkMeetingFile(tenant, file);
+    return {
+      ...base,
+      sourcePath: `/v1/Meetings/GetMeetingFileStream(fileId=${file.fileId},plainText=false)`,
+      readMethod: 'meeting_pdf',
+      status: parsed.status,
+      pageCount: parsed.pageCount,
+      characters: parsed.characters,
+      sha256: parsed.sha256,
+      text: parsed.status === 'text_extracted' ? parsed.text : '',
+      error: null,
+      plainTextError,
+    };
+  } catch (error) {
+    return {
+      ...base,
+      sourcePath: `/v1/Meetings/GetMeetingFileStream(fileId=${file.fileId},plainText=false)`,
+      readMethod: 'meeting_pdf',
+      status: 'read_failed',
+      pageCount: null,
+      characters: 0,
+      sha256: null,
+      text: '',
+      error: compactError(error),
+      plainTextError,
+    };
+  }
+}
+
+function attachmentBase(tenant, event, item, attachment) {
   return {
     id: documentId(event.id, 'attachment', attachment.id),
     kind: 'attachment',
-    tenant: 'mitchellsd',
+    tenant,
     body: event.categoryName || null,
     meetingDate: event.date || null,
     meetingName: event.name || null,
@@ -85,13 +131,13 @@ function attachmentBase(event, item, attachment) {
   };
 }
 
-async function indexAttachment(event, item, attachment) {
-  const base = attachmentBase(event, item, attachment);
+async function indexAttachment(tenant, event, item, attachment) {
+  const base = attachmentBase(tenant, event, item, attachment);
   if (attachment.isLink) {
-    return { ...base, sourcePath: null, status: 'external_link', pageCount: null, characters: 0, sha256: null, text: '', error: null };
+    return { ...base, sourcePath: null, readMethod: 'external_link', status: 'external_link', pageCount: null, characters: 0, sha256: null, text: '', error: null };
   }
   if (!attachment.downloadUrl) {
-    return { ...base, sourcePath: null, status: 'unavailable', pageCount: null, characters: 0, sha256: null, text: '', error: 'No CivicClerk PDF URL exposed' };
+    return { ...base, sourcePath: null, readMethod: null, status: 'unavailable', pageCount: null, characters: 0, sha256: null, text: '', error: 'No CivicClerk PDF URL exposed' };
   }
   try {
     const parsed = await readCivicClerkAttachment({
@@ -103,6 +149,7 @@ async function indexAttachment(event, item, attachment) {
     return {
       ...base,
       sourcePath,
+      readMethod: 'attachment_pdf',
       status: parsed.status,
       pageCount: parsed.pageCount,
       characters: parsed.characters,
@@ -114,6 +161,7 @@ async function indexAttachment(event, item, attachment) {
     return {
       ...base,
       sourcePath: null,
+      readMethod: 'attachment_pdf',
       status: 'read_failed',
       pageCount: null,
       characters: 0,
@@ -140,15 +188,10 @@ export async function buildCivicClerkCorpus({
   for (const event of events) {
     const files = classifyPublishedFiles(event.publishedFiles || []);
     const minutesFile = selectMinutesFile(files);
-    let minutesText = null;
-    let minutesError = null;
+    let minutesDocument = null;
     if (minutesFile) {
-      try {
-        minutesText = await getMeetingFileText(tenant, minutesFile.fileId);
-      } catch (error) {
-        minutesError = compactError(error);
-      }
-      documents.push(sourceFileRecord(event, minutesFile, minutesText, minutesError));
+      minutesDocument = await indexMinutesFile(tenant, event, minutesFile);
+      documents.push(minutesDocument);
     }
 
     let agenda = null;
@@ -167,7 +210,7 @@ export async function buildCivicClerkCorpus({
     const attachmentDocuments = await mapLimit(
       attachmentJobs,
       attachmentConcurrency,
-      ({ item, attachment }) => indexAttachment(event, item, attachment),
+      ({ item, attachment }) => indexAttachment(tenant, event, item, attachment),
     );
     documents.push(...attachmentDocuments);
 
@@ -183,9 +226,10 @@ export async function buildCivicClerkCorpus({
       agendaItemCount: agendaItems.length,
       attachmentCount: attachmentJobs.length,
       agendaStatus: agendaError ? 'read_failed' : (agenda ? 'available' : 'not_published'),
-      minutesStatus: minutesFile ? (minutesError ? 'read_failed' : (minutesText ? 'text_extracted' : 'no_usable_text')) : 'not_published',
+      minutesStatus: minutesDocument?.status || 'not_published',
+      minutesReadMethod: minutesDocument?.readMethod || null,
       agendaError,
-      minutesError,
+      minutesError: minutesDocument?.error || null,
     });
   }
 
@@ -193,6 +237,7 @@ export async function buildCivicClerkCorpus({
   for (const year of new Set([String(from).slice(0, 4), String(to).slice(0, 4), ...meetings.map((m) => yearOf(m.date))])) {
     const yearMeetings = meetings.filter((meeting) => yearOf(meeting.date) === year);
     const yearDocuments = documents.filter((document) => yearOf(document.meetingDate) === year);
+    const yearMinutes = yearDocuments.filter((document) => document.kind === 'minutes');
     years[year] = {
       meetings: yearMeetings.length,
       documents: yearDocuments.length,
@@ -200,17 +245,26 @@ export async function buildCivicClerkCorpus({
       visualRequired: yearDocuments.filter((document) => document.status === 'visual_required').length,
       readFailed: yearDocuments.filter((document) => document.status === 'read_failed').length,
       minutesPublished: yearMeetings.filter((meeting) => meeting.minutesFileId).length,
+      minutesTextExtracted: yearMinutes.filter((document) => document.status === 'text_extracted').length,
+      minutesVisualRequired: yearMinutes.filter((document) => document.status === 'visual_required').length,
+      minutesReadFailed: yearMinutes.filter((document) => document.status === 'read_failed').length,
+      minutesBinaryFallback: yearMinutes.filter((document) => document.readMethod === 'meeting_pdf').length,
     };
   }
 
+  const minutesDocuments = documents.filter((document) => document.kind === 'minutes');
   const stats = {
     meetings: meetings.length,
     documents: documents.length,
-    minutesDocuments: documents.filter((document) => document.kind === 'minutes').length,
+    minutesDocuments: minutesDocuments.length,
     attachmentDocuments: documents.filter((document) => document.kind === 'attachment').length,
     textDocuments: documents.filter((document) => document.status === 'text_extracted').length,
     visualRequired: documents.filter((document) => document.status === 'visual_required').length,
     readFailed: documents.filter((document) => document.status === 'read_failed').length,
+    minutesTextExtracted: minutesDocuments.filter((document) => document.status === 'text_extracted').length,
+    minutesVisualRequired: minutesDocuments.filter((document) => document.status === 'visual_required').length,
+    minutesReadFailed: minutesDocuments.filter((document) => document.status === 'read_failed').length,
+    minutesBinaryFallback: minutesDocuments.filter((document) => document.readMethod === 'meeting_pdf').length,
     years,
   };
 
@@ -294,6 +348,7 @@ export function searchCorpus(corpus, query, { from = null, to = null, limit = 20
       agendaItemName: document.agendaItemName,
       fileName: document.fileName,
       status: document.status,
+      readMethod: document.readMethod,
       pageCount: document.pageCount,
       characters: document.characters,
       sha256: document.sha256,
