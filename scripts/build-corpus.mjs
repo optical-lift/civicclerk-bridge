@@ -13,6 +13,10 @@ function args(argv) {
   return result;
 }
 
+function enabled(value) {
+  return /^(1|true|yes|on)$/i.test(String(value || ''));
+}
+
 const options = args(process.argv);
 const output = options.output || 'data/mitchellsd/sea-corpus.json';
 const corpus = await buildCivicClerkCorpus({
@@ -21,6 +25,12 @@ const corpus = await buildCivicClerkCorpus({
   from: options.from || DEFAULT_CORPUS_FROM,
   to: options.to || DEFAULT_CORPUS_TO,
   attachmentConcurrency: Number(options.concurrency || 3),
+  ocrVisualDocuments: enabled(options.ocr),
+  ocrOptions: {
+    renderWidth: Number(options['ocr-render-width'] || 2000),
+    language: options['ocr-language'] || 'eng',
+    psm: Number(options['ocr-psm'] || 6),
+  },
 });
 
 await fs.mkdir(path.dirname(output), { recursive: true });
@@ -32,5 +42,6 @@ console.log(JSON.stringify({
   body: corpus.body,
   categoryId: corpus.categoryId,
   requestedCoverage: corpus.requestedCoverage,
+  extraction: corpus.extraction,
   stats: corpus.stats,
 }, null, 2));
