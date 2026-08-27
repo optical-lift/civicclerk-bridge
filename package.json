@@ -1,11 +1,14 @@
 {
-  "name": "civicclerk-bridge-step1",
-  "version": "0.1.0",
+  "name": "civicclerk-bridge-step2",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test",
     "probe:mitchell": "node src/cli.mjs --tenant mitchellsd --body \"Sports & Events Authority\" --date 2026-08-18"
   },
-  "engines": {"node": ">=20"}
+  "dependencies": {
+    "pdf-parse": "2.4.5"
+  },
+  "engines": {"node": ">=20.16"}
 }
