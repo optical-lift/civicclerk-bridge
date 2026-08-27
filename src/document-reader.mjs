@@ -154,7 +154,10 @@ export async function renderPdfPage(bytes, { page = 1, width = DEFAULT_RENDER_WI
   const pageNumber = Number(page);
   if (!Number.isInteger(pageNumber) || pageNumber < 1) throw new Error('PDF page must be a positive integer');
   const desiredWidth = normalizeRenderWidth(width);
-  const parser = new PDFParse({ data: bytes });
+  // pdf-parse/pdf.js may transfer ownership of TypedArray input. Render from a
+  // fresh clone so a multi-page caller can reuse the untouched source buffer.
+  const renderBytes = bytes.slice();
+  const parser = new PDFParse({ data: renderBytes });
   try {
     const result = await parser.getScreenshot({
       partial: [pageNumber],
