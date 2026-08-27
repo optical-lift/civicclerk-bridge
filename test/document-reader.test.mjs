@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   isPdfMagic,
+  meetingFilePdfUrl,
   needsVisualFallback,
   normalizeRenderWidth,
   selectAttachmentById,
@@ -28,6 +29,13 @@ test('attachment selection preserves agenda-item custody', () => {
   assert.equal(attachment.agendaItemId, 10930);
   assert.equal(attachment.agendaItemName, 'Cornicupia 2026');
   assert.equal(attachment.fileName, 'Cornicupia 2026 Event Budget');
+});
+
+test('binary meeting file reader uses the fixed CivicClerk file-stream endpoint', () => {
+  assert.equal(
+    meetingFilePdfUrl('mitchellsd', 5349),
+    'https://mitchellsd.api.civicclerk.com/v1/Meetings/GetMeetingFileStream(fileId=5349,plainText=false)',
+  );
 });
 
 test('visual fallback is required when embedded PDF text is too sparse', () => {
