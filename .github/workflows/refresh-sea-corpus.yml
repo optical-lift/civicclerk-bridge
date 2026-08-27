@@ -43,10 +43,11 @@ jobs:
       - name: Build 2023-2026 Mitchell SEA corpus
         run: npm run build:sea-corpus
 
-      - name: Validate corpus custody and minutes coverage
+      - name: Validate corpus custody, minutes coverage, and referee search
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
+          import { searchCorpus } from './src/corpus.mjs';
           const corpus = JSON.parse(fs.readFileSync('data/mitchellsd/sea-corpus.json', 'utf8'));
           if (corpus.schemaVersion !== 1) throw new Error(`Unexpected corpus schema ${corpus.schemaVersion}`);
           if (corpus.categoryId !== 42) throw new Error(`Expected SEA category 42, got ${corpus.categoryId}`);
@@ -74,7 +75,27 @@ jobs:
           if (Number(stats.minutesBinaryFallback || 0) < 1) {
             throw new Error('Minutes binary fallback was not exercised by the live historical corpus');
           }
-          console.log(JSON.stringify(corpus.stats, null, 2));
+
+          const refereeResults = searchCorpus(corpus, 'referees', {
+            from: '2026-01-01',
+            to: '2026-12-31',
+            limit: 100,
+          });
+          const cornicupiaBudget = refereeResults.find((result) => Number(result.attachmentId) === 11012);
+          if (!cornicupiaBudget) {
+            throw new Error('Historical search failed to find Cornicupia 2026 Event Budget attachment 11012 for referees');
+          }
+          if (!/Referees\s*-\s*\$7500/i.test(cornicupiaBudget.snippet || '')) {
+            throw new Error(`Cornicupia referee search result lost the $7,500 expense line: ${JSON.stringify(cornicupiaBudget)}`);
+          }
+          if (Number(cornicupiaBudget.eventId) !== 1540 || Number(cornicupiaBudget.agendaId) !== 1509) {
+            throw new Error(`Cornicupia search result lost meeting custody: ${JSON.stringify(cornicupiaBudget)}`);
+          }
+
+          console.log(JSON.stringify({
+            stats: corpus.stats,
+            refereeAcceptance: cornicupiaBudget,
+          }, null, 2));
           NODE
 
       - name: Upload corpus evidence
