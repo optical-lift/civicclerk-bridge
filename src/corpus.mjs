@@ -8,9 +8,10 @@ import {
   selectMinutesFile,
 } from './civicclerk.mjs';
 import { readCivicClerkAttachment, readCivicClerkMeetingFile } from './document-reader.mjs';
+import { ocrPdfPages } from './ocr.mjs';
 import { listEventsRange } from './event-range.mjs';
 
-export const CORPUS_SCHEMA_VERSION = 1;
+export const CORPUS_SCHEMA_VERSION = 2;
 export const DEFAULT_CORPUS_FROM = '2023-01-01';
 export const DEFAULT_CORPUS_TO = '2026-12-31';
 
@@ -70,10 +71,15 @@ async function indexMinutesFile(tenant, event, file) {
         sourcePath: `/v1/Meetings/GetMeetingFileStream(fileId=${file.fileId},plainText=true)`,
         readMethod: 'civicclerk_plaintext',
         status: 'text_extracted',
+        sourceTextStatus: 'text_extracted',
+        textOrigin: 'civicclerk_plaintext',
         pageCount: null,
         characters: text.length,
         sha256: null,
         text,
+        ocrStatus: null,
+        ocr: null,
+        ocrError: null,
         error: null,
         plainTextError: null,
       };
@@ -89,10 +95,15 @@ async function indexMinutesFile(tenant, event, file) {
       sourcePath: `/v1/Meetings/GetMeetingFileStream(fileId=${file.fileId},plainText=false)`,
       readMethod: 'meeting_pdf',
       status: parsed.status,
+      sourceTextStatus: parsed.status,
+      textOrigin: parsed.status === 'text_extracted' ? 'embedded_pdf' : null,
       pageCount: parsed.pageCount,
       characters: parsed.characters,
       sha256: parsed.sha256,
       text: parsed.status === 'text_extracted' ? parsed.text : '',
+      ocrStatus: null,
+      ocr: null,
+      ocrError: null,
       error: null,
       plainTextError,
     };
@@ -102,10 +113,15 @@ async function indexMinutesFile(tenant, event, file) {
       sourcePath: `/v1/Meetings/GetMeetingFileStream(fileId=${file.fileId},plainText=false)`,
       readMethod: 'meeting_pdf',
       status: 'read_failed',
+      sourceTextStatus: 'read_failed',
+      textOrigin: null,
       pageCount: null,
       characters: 0,
       sha256: null,
       text: '',
+      ocrStatus: null,
+      ocr: null,
+      ocrError: null,
       error: compactError(error),
       plainTextError,
     };
@@ -131,30 +147,152 @@ function attachmentBase(tenant, event, item, attachment) {
   };
 }
 
-async function indexAttachment(tenant, event, item, attachment) {
+function compactOcrMetadata(ocr) {
+  return {
+    engine: ocr.engine,
+    language: ocr.language,
+    psm: ocr.psm,
+    renderWidth: ocr.renderWidth,
+    pageCount: ocr.pageCount,
+    usableCharacters: ocr.usableCharacters,
+    meanConfidence: ocr.meanConfidence,
+    pages: (ocr.pages || []).map((page) => ({
+      page: page.page,
+      width: page.width,
+      height: page.height,
+      imageSha256: page.imageSha256,
+      characters: page.characters,
+      words: page.words,
+      lines: page.lines,
+      meanConfidence: page.meanConfidence,
+    })),
+  };
+}
+
+async function indexAttachment(tenant, event, item, attachment, {
+  ocrVisualDocuments = false,
+  ocrOptions = {},
+} = {}) {
   const base = attachmentBase(tenant, event, item, attachment);
   if (attachment.isLink) {
-    return { ...base, sourcePath: null, readMethod: 'external_link', status: 'external_link', pageCount: null, characters: 0, sha256: null, text: '', error: null };
+    return {
+      ...base,
+      sourcePath: null,
+      readMethod: 'external_link',
+      status: 'external_link',
+      sourceTextStatus: null,
+      textOrigin: null,
+      pageCount: null,
+      characters: 0,
+      sha256: null,
+      text: '',
+      ocrStatus: null,
+      ocr: null,
+      ocrError: null,
+      error: null,
+    };
   }
   if (!attachment.downloadUrl) {
-    return { ...base, sourcePath: null, readMethod: null, status: 'unavailable', pageCount: null, characters: 0, sha256: null, text: '', error: 'No CivicClerk PDF URL exposed' };
+    return {
+      ...base,
+      sourcePath: null,
+      readMethod: null,
+      status: 'unavailable',
+      sourceTextStatus: null,
+      textOrigin: null,
+      pageCount: null,
+      characters: 0,
+      sha256: null,
+      text: '',
+      ocrStatus: null,
+      ocr: null,
+      ocrError: null,
+      error: 'No CivicClerk PDF URL exposed',
+    };
   }
   try {
     const parsed = await readCivicClerkAttachment({
       agendaItemId: item.id,
       agendaItemName: item.name,
       ...attachment,
-    });
+    }, { includeBytes: ocrVisualDocuments });
     const sourcePath = parsed.sourceUrl ? new URL(parsed.sourceUrl).pathname : null;
+
+    if (parsed.status === 'visual_required' && ocrVisualDocuments) {
+      try {
+        const ocr = await ocrPdfPages(parsed.bytes, {
+          pageCount: parsed.pageCount,
+          ...ocrOptions,
+        });
+        const metadata = compactOcrMetadata(ocr);
+        if (ocr.status === 'ocr_extracted') {
+          return {
+            ...base,
+            sourcePath,
+            readMethod: 'attachment_pdf+ocr',
+            status: 'ocr_extracted',
+            sourceTextStatus: 'visual_required',
+            textOrigin: 'ocr',
+            pageCount: parsed.pageCount,
+            characters: ocr.characters,
+            sha256: parsed.sha256,
+            text: ocr.text,
+            ocrStatus: 'ocr_extracted',
+            ocr: metadata,
+            ocrError: null,
+            error: null,
+          };
+        }
+        return {
+          ...base,
+          sourcePath,
+          readMethod: 'attachment_pdf+ocr',
+          status: 'visual_required',
+          sourceTextStatus: 'visual_required',
+          textOrigin: null,
+          pageCount: parsed.pageCount,
+          characters: 0,
+          sha256: parsed.sha256,
+          text: '',
+          ocrStatus: 'ocr_no_text',
+          ocr: metadata,
+          ocrError: null,
+          error: null,
+        };
+      } catch (error) {
+        return {
+          ...base,
+          sourcePath,
+          readMethod: 'attachment_pdf+ocr',
+          status: 'visual_required',
+          sourceTextStatus: 'visual_required',
+          textOrigin: null,
+          pageCount: parsed.pageCount,
+          characters: 0,
+          sha256: parsed.sha256,
+          text: '',
+          ocrStatus: 'ocr_failed',
+          ocr: null,
+          ocrError: compactError(error),
+          error: null,
+        };
+      }
+    }
+
     return {
       ...base,
       sourcePath,
       readMethod: 'attachment_pdf',
       status: parsed.status,
+      sourceTextStatus: parsed.status,
+      textOrigin: parsed.status === 'text_extracted' ? 'embedded_pdf' : null,
       pageCount: parsed.pageCount,
       characters: parsed.characters,
       sha256: parsed.sha256,
       text: parsed.status === 'text_extracted' ? parsed.text : '',
+      ocrStatus: null,
+      ocr: null,
+      ocrError: null,
       error: null,
     };
   } catch (error) {
@@ -163,13 +301,40 @@ async function indexAttachment(tenant, event, item, attachment) {
       sourcePath: null,
       readMethod: 'attachment_pdf',
       status: 'read_failed',
+      sourceTextStatus: 'read_failed',
+      textOrigin: null,
       pageCount: null,
       characters: 0,
       sha256: null,
       text: '',
+      ocrStatus: null,
+      ocr: null,
+      ocrError: null,
       error: compactError(error),
     };
   }
+}
+
+function documentStats(documents) {
+  const minutesDocuments = documents.filter((document) => document.kind === 'minutes');
+  return {
+    documents: documents.length,
+    minutesDocuments: minutesDocuments.length,
+    attachmentDocuments: documents.filter((document) => document.kind === 'attachment').length,
+    textDocuments: documents.filter((document) => ['text_extracted', 'ocr_extracted'].includes(document.status)).length,
+    embeddedTextDocuments: documents.filter((document) => document.status === 'text_extracted').length,
+    ocrDocuments: documents.filter((document) => document.status === 'ocr_extracted').length,
+    visualRequired: documents.filter((document) => document.status === 'visual_required').length,
+    readFailed: documents.filter((document) => document.status === 'read_failed').length,
+    ocrAttempted: documents.filter((document) => document.ocrStatus).length,
+    ocrExtracted: documents.filter((document) => document.ocrStatus === 'ocr_extracted').length,
+    ocrNoText: documents.filter((document) => document.ocrStatus === 'ocr_no_text').length,
+    ocrFailed: documents.filter((document) => document.ocrStatus === 'ocr_failed').length,
+    minutesTextExtracted: minutesDocuments.filter((document) => document.status === 'text_extracted').length,
+    minutesVisualRequired: minutesDocuments.filter((document) => document.status === 'visual_required').length,
+    minutesReadFailed: minutesDocuments.filter((document) => document.status === 'read_failed').length,
+    minutesBinaryFallback: minutesDocuments.filter((document) => document.readMethod === 'meeting_pdf').length,
+  };
 }
 
 export async function buildCivicClerkCorpus({
@@ -178,6 +343,8 @@ export async function buildCivicClerkCorpus({
   from = DEFAULT_CORPUS_FROM,
   to = DEFAULT_CORPUS_TO,
   attachmentConcurrency = 3,
+  ocrVisualDocuments = false,
+  ocrOptions = {},
 } = {}) {
   const categories = await getEventCategories(tenant);
   const category = resolveCategory(categories, body);
@@ -210,7 +377,7 @@ export async function buildCivicClerkCorpus({
     const attachmentDocuments = await mapLimit(
       attachmentJobs,
       attachmentConcurrency,
-      ({ item, attachment }) => indexAttachment(tenant, event, item, attachment),
+      ({ item, attachment }) => indexAttachment(tenant, event, item, attachment, { ocrVisualDocuments, ocrOptions }),
     );
     documents.push(...attachmentDocuments);
 
@@ -237,34 +404,16 @@ export async function buildCivicClerkCorpus({
   for (const year of new Set([String(from).slice(0, 4), String(to).slice(0, 4), ...meetings.map((m) => yearOf(m.date))])) {
     const yearMeetings = meetings.filter((meeting) => yearOf(meeting.date) === year);
     const yearDocuments = documents.filter((document) => yearOf(document.meetingDate) === year);
-    const yearMinutes = yearDocuments.filter((document) => document.kind === 'minutes');
     years[year] = {
       meetings: yearMeetings.length,
-      documents: yearDocuments.length,
-      textDocuments: yearDocuments.filter((document) => document.status === 'text_extracted').length,
-      visualRequired: yearDocuments.filter((document) => document.status === 'visual_required').length,
-      readFailed: yearDocuments.filter((document) => document.status === 'read_failed').length,
+      ...documentStats(yearDocuments),
       minutesPublished: yearMeetings.filter((meeting) => meeting.minutesFileId).length,
-      minutesTextExtracted: yearMinutes.filter((document) => document.status === 'text_extracted').length,
-      minutesVisualRequired: yearMinutes.filter((document) => document.status === 'visual_required').length,
-      minutesReadFailed: yearMinutes.filter((document) => document.status === 'read_failed').length,
-      minutesBinaryFallback: yearMinutes.filter((document) => document.readMethod === 'meeting_pdf').length,
     };
   }
 
-  const minutesDocuments = documents.filter((document) => document.kind === 'minutes');
   const stats = {
     meetings: meetings.length,
-    documents: documents.length,
-    minutesDocuments: minutesDocuments.length,
-    attachmentDocuments: documents.filter((document) => document.kind === 'attachment').length,
-    textDocuments: documents.filter((document) => document.status === 'text_extracted').length,
-    visualRequired: documents.filter((document) => document.status === 'visual_required').length,
-    readFailed: documents.filter((document) => document.status === 'read_failed').length,
-    minutesTextExtracted: minutesDocuments.filter((document) => document.status === 'text_extracted').length,
-    minutesVisualRequired: minutesDocuments.filter((document) => document.status === 'visual_required').length,
-    minutesReadFailed: minutesDocuments.filter((document) => document.status === 'read_failed').length,
-    minutesBinaryFallback: minutesDocuments.filter((document) => document.readMethod === 'meeting_pdf').length,
+    ...documentStats(documents),
     years,
   };
 
@@ -274,6 +423,11 @@ export async function buildCivicClerkCorpus({
     body: category.name,
     categoryId: category.id,
     requestedCoverage: { from, to },
+    extraction: {
+      ocrVisualDocuments: Boolean(ocrVisualDocuments),
+      ocrEngine: ocrVisualDocuments ? 'tesseract' : null,
+      ocrTextIsDerived: true,
+    },
     stats,
     meetings,
     documents,
@@ -349,10 +503,14 @@ export function searchCorpus(corpus, query, { from = null, to = null, limit = 20
       fileName: document.fileName,
       status: document.status,
       readMethod: document.readMethod,
+      sourceTextStatus: document.sourceTextStatus,
+      textOrigin: document.textOrigin,
       pageCount: document.pageCount,
       characters: document.characters,
       sha256: document.sha256,
       sourcePath: document.sourcePath,
+      ocrStatus: document.ocrStatus,
+      ocrMeanConfidence: document.ocr?.meanConfidence ?? null,
       snippet: snippet(document.text, query),
     }));
 }

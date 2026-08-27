@@ -63,7 +63,7 @@ async function fetchPdfUrl(url, { maxBytes = DEFAULT_MAX_PDF_BYTES, label = 'PDF
     redirect: 'follow',
     headers: {
       accept: 'application/pdf,*/*;q=0.8',
-      'user-agent': 'CivicClerk-Bridge/0.5 (+read-only municipal records)',
+      'user-agent': 'CivicClerk-Bridge/0.6 (+read-only municipal records)',
     },
   });
 
@@ -154,7 +154,10 @@ export async function renderPdfPage(bytes, { page = 1, width = DEFAULT_RENDER_WI
   const pageNumber = Number(page);
   if (!Number.isInteger(pageNumber) || pageNumber < 1) throw new Error('PDF page must be a positive integer');
   const desiredWidth = normalizeRenderWidth(width);
-  const parser = new PDFParse({ data: bytes });
+  // pdf-parse/pdf.js may transfer ownership of TypedArray input. Render from a
+  // fresh clone so a multi-page caller can reuse the untouched source buffer.
+  const renderBytes = bytes.slice();
+  const parser = new PDFParse({ data: renderBytes });
   try {
     const result = await parser.getScreenshot({
       partial: [pageNumber],
@@ -197,8 +200,13 @@ export function visualPageDescriptors({ tenant, body, date, attachmentId, pageCo
 
 export async function readCivicClerkAttachment(attachment, options = {}) {
   if (!attachment?.downloadUrl) throw new Error('Attachment has no downloadable PDF URL');
-  const fetched = await fetchPdfBytes(attachment.downloadUrl, options);
-  const extracted = await extractPdfText(fetched.bytes, options);
+  const { includeBytes = false, ...readerOptions } = options;
+  const fetched = await fetchPdfBytes(attachment.downloadUrl, readerOptions);
+  // pdf-parse may transfer ownership of TypedArray data into its worker. When a
+  // downstream visual/OCR path needs the source bytes, extract from a clone so
+  // the original fetched bytes remain intact and source-custodied in memory.
+  const extractionBytes = includeBytes ? fetched.bytes.slice() : fetched.bytes;
+  const extracted = await extractPdfText(extractionBytes, readerOptions);
 
   return {
     attachmentId: Number(attachment.id),
@@ -210,14 +218,17 @@ export async function readCivicClerkAttachment(attachment, options = {}) {
     contentType: fetched.contentType,
     sha256: fetched.sha256,
     ...extracted,
+    ...(includeBytes ? { bytes: fetched.bytes } : {}),
   };
 }
 
 export async function readCivicClerkMeetingFile(tenant, file, options = {}) {
   const fileId = Number(file?.fileId ?? file?.id);
   if (!Number.isFinite(fileId)) throw new Error('Meeting file has no numeric fileId');
-  const fetched = await fetchMeetingPdfBytes(tenant, fileId, options);
-  const extracted = await extractPdfText(fetched.bytes, options);
+  const { includeBytes = false, ...readerOptions } = options;
+  const fetched = await fetchMeetingPdfBytes(tenant, fileId, readerOptions);
+  const extractionBytes = includeBytes ? fetched.bytes.slice() : fetched.bytes;
+  const extracted = await extractPdfText(extractionBytes, readerOptions);
   return {
     fileId,
     fileName: file?.name || null,
@@ -227,5 +238,6 @@ export async function readCivicClerkMeetingFile(tenant, file, options = {}) {
     contentType: fetched.contentType,
     sha256: fetched.sha256,
     ...extracted,
+    ...(includeBytes ? { bytes: fetched.bytes } : {}),
   };
 }

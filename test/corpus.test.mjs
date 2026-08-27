@@ -19,6 +19,8 @@ const corpus = {
       agendaItemName: 'Cornicupia 2026',
       fileName: 'Cornicupia 2026 Event Budget',
       status: 'text_extracted',
+      sourceTextStatus: 'text_extracted',
+      textOrigin: 'embedded_pdf',
       pageCount: 1,
       characters: 191,
       sha256: 'a'.repeat(64),
@@ -38,6 +40,8 @@ const corpus = {
       agendaItemName: 'Cornicupia 2025',
       fileName: 'Cornicupia 2025 Event Budget',
       status: 'text_extracted',
+      sourceTextStatus: 'text_extracted',
+      textOrigin: 'embedded_pdf',
       pageCount: 1,
       characters: 120,
       sha256: 'b'.repeat(64),
@@ -57,11 +61,38 @@ const corpus = {
       agendaItemName: 'Thank you card',
       fileName: '2026 MAC Area Events, Inc',
       status: 'visual_required',
+      sourceTextStatus: 'visual_required',
+      textOrigin: null,
       pageCount: 1,
-      characters: 19,
+      characters: 0,
       sha256: 'c'.repeat(64),
       sourcePath: '/stream/MITCHELLSD/card.pdf',
       text: '',
+      ocrStatus: 'ocr_no_text',
+    },
+    {
+      id: '1015:attachment:134',
+      kind: 'attachment',
+      meetingDate: '2023-02-14T14:00:00Z',
+      meetingName: 'Sports & Events Authority Advisory Committee',
+      body: 'Sports & Events Authority Advisory Committee',
+      eventId: 1015,
+      agendaId: 1020,
+      attachmentId: 134,
+      agendaItemId: 900,
+      agendaItemName: 'Mitchell Music Boosters: Mitchell Show Choir Classic',
+      fileName: 'Mitchell Show Choir Classic Budget 2023',
+      status: 'ocr_extracted',
+      sourceTextStatus: 'visual_required',
+      textOrigin: 'ocr',
+      readMethod: 'attachment_pdf+ocr',
+      pageCount: 1,
+      characters: 92,
+      sha256: 'd'.repeat(64),
+      sourcePath: '/stream/MITCHELLSD/show-choir.pdf',
+      text: '--- OCR PAGE 1 OF 1 ---\nMitchell Show Choir Classic Budget 2023\nEstimated Expenses\nJudges $2400',
+      ocrStatus: 'ocr_extracted',
+      ocr: { meanConfidence: 91.25 },
     },
   ],
 };
@@ -87,4 +118,16 @@ test('visual-required documents remain discoverable by title and agenda metadata
   assert.ok(match);
   assert.equal(match.status, 'visual_required');
   assert.equal(match.fileName, '2026 MAC Area Events, Inc');
+});
+
+test('OCR-derived text is searchable while remaining explicitly machine-derived', () => {
+  const results = searchCorpus(corpus, 'judges', { from: '2023-01-01', to: '2023-12-31' });
+  const match = results.find((result) => result.attachmentId === 134);
+  assert.ok(match);
+  assert.equal(match.status, 'ocr_extracted');
+  assert.equal(match.sourceTextStatus, 'visual_required');
+  assert.equal(match.textOrigin, 'ocr');
+  assert.equal(match.ocrStatus, 'ocr_extracted');
+  assert.equal(match.ocrMeanConfidence, 91.25);
+  assert.match(match.snippet, /Judges \$2400/i);
 });

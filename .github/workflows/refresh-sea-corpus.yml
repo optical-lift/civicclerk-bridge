@@ -21,10 +21,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: sea-corpus-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-sea-corpus:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -37,33 +41,64 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Install deterministic OCR engine
+        run: |
+          if ! command -v tesseract >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y tesseract-ocr
+          fi
+          tesseract --version
+          tesseract --list-langs | grep -Fx eng
+
       - name: Run contract tests
         run: npm test
 
-      - name: Build 2023-2026 Mitchell SEA corpus
-        run: npm run build:sea-corpus
+      - name: Build 2023-2026 Mitchell SEA corpus with scan OCR
+        run: npm run build:sea-corpus -- --ocr true --ocr-psm 3 --ocr-render-width 2000 --concurrency 3
 
-      - name: Validate corpus custody, minutes coverage, and referee search
+      - name: Validate corpus custody, minutes, OCR, and referee search
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           import { searchCorpus } from './src/corpus.mjs';
           const corpus = JSON.parse(fs.readFileSync('data/mitchellsd/sea-corpus.json', 'utf8'));
-          if (corpus.schemaVersion !== 1) throw new Error(`Unexpected corpus schema ${corpus.schemaVersion}`);
+          if (corpus.schemaVersion !== 2) throw new Error(`Unexpected corpus schema ${corpus.schemaVersion}`);
           if (corpus.categoryId !== 42) throw new Error(`Expected SEA category 42, got ${corpus.categoryId}`);
           if (corpus.requestedCoverage?.from !== '2023-01-01' || corpus.requestedCoverage?.to !== '2026-12-31') {
             throw new Error('Historical coverage bounds changed unexpectedly');
           }
+          if (corpus.extraction?.ocrVisualDocuments !== true || corpus.extraction?.ocrEngine !== 'tesseract') {
+            throw new Error(`OCR extraction contract missing: ${JSON.stringify(corpus.extraction)}`);
+          }
           if (!Array.isArray(corpus.meetings) || corpus.meetings.length < 1) throw new Error('No SEA meetings indexed');
           if (!Array.isArray(corpus.documents) || corpus.documents.length < 1) throw new Error('No SEA documents indexed');
+
           for (const document of corpus.documents) {
             if (!document.id || !document.eventId || !document.meetingDate) throw new Error(`Document missing meeting custody: ${JSON.stringify(document)}`);
             if (document.kind === 'attachment' && !document.attachmentId) throw new Error(`Attachment document missing attachmentId: ${document.id}`);
             if (document.downloadUrl) throw new Error(`Expiring signed URL leaked into durable corpus: ${document.id}`);
+            if (document.bytes) throw new Error(`Raw PDF bytes leaked into durable corpus: ${document.id}`);
             if (document.kind === 'minutes' && document.status === 'no_usable_text') {
               throw new Error(`Published minutes were left unread after fallback: ${document.id}`);
             }
+            if (document.sourceTextStatus === 'visual_required' && !document.ocrStatus) {
+              throw new Error(`Scan-classified document was not OCR-attempted: ${document.id}`);
+            }
+            if (document.status === 'ocr_extracted') {
+              if (document.textOrigin !== 'ocr' || document.ocrStatus !== 'ocr_extracted') {
+                throw new Error(`OCR-derived text lost provenance: ${document.id}`);
+              }
+              if (!document.sha256 || !document.ocr?.pages?.length) {
+                throw new Error(`OCR-derived text lost source/page custody: ${document.id}`);
+              }
+              for (const page of document.ocr.pages) {
+                if (!/^\p{ASCII}{64}$/u.test(page.imageSha256 || '') || !/^[a-f0-9]{64}$/i.test(page.imageSha256 || '')) {
+                  throw new Error(`OCR page image hash missing: ${document.id} page ${page.page}`);
+                }
+              }
+            }
           }
+
           const stats = corpus.stats || {};
           const accountedMinutes = Number(stats.minutesTextExtracted || 0) + Number(stats.minutesVisualRequired || 0) + Number(stats.minutesReadFailed || 0);
           if (accountedMinutes !== Number(stats.minutesDocuments || 0)) {
@@ -74,6 +109,21 @@ jobs:
           }
           if (Number(stats.minutesBinaryFallback || 0) < 1) {
             throw new Error('Minutes binary fallback was not exercised by the live historical corpus');
+          }
+          if (Number(stats.ocrAttempted || 0) < 150) {
+            throw new Error(`Too few scan documents reached OCR: ${stats.ocrAttempted}`);
+          }
+          if (Number(stats.ocrFailed || 0) !== 0) {
+            throw new Error(`OCR process failures remain: ${stats.ocrFailed}`);
+          }
+          if (Number(stats.ocrExtracted || 0) < 1) {
+            throw new Error('OCR did not produce searchable text for any scanned document');
+          }
+
+          const showChoirBudget = corpus.documents.find((document) => Number(document.attachmentId) === 134);
+          if (!showChoirBudget) throw new Error('Known scanned Show Choir budget attachment 134 is missing');
+          if (showChoirBudget.status !== 'ocr_extracted' || showChoirBudget.textOrigin !== 'ocr' || Number(showChoirBudget.characters || 0) < 50) {
+            throw new Error(`Known scanned financial document did not become OCR-searchable: ${JSON.stringify(showChoirBudget)}`);
           }
 
           const refereeResults = searchCorpus(corpus, 'referees', {
@@ -94,6 +144,13 @@ jobs:
 
           console.log(JSON.stringify({
             stats: corpus.stats,
+            scannedFinancialAcceptance: {
+              attachmentId: showChoirBudget.attachmentId,
+              status: showChoirBudget.status,
+              characters: showChoirBudget.characters,
+              meanConfidence: showChoirBudget.ocr?.meanConfidence ?? null,
+              preview: String(showChoirBudget.text || '').slice(0, 500),
+            },
             refereeAcceptance: cornicupiaBudget,
           }, null, 2));
           NODE
