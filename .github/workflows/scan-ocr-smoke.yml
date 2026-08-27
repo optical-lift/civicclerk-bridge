@@ -1,0 +1,39 @@
+name: Live scan OCR smoke probe
+
+on:
+  pull_request:
+    paths:
+      - 'src/ocr.mjs'
+      - 'src/document-reader.mjs'
+      - 'src/civicclerk.mjs'
+      - 'scripts/probe-scan-ocr.mjs'
+      - '.github/workflows/scan-ocr-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  known-civicclerk-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Node dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install OCR engine
+        run: |
+          if ! command -v tesseract >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y tesseract-ocr
+          fi
+          tesseract --version
+          tesseract --list-langs | grep -Fx eng
+
+      - name: OCR known live CivicClerk scan
+        run: node scripts/probe-scan-ocr.mjs
