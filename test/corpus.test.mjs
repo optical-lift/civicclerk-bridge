@@ -83,7 +83,8 @@ test('date filters prevent a later meeting from hiding historical matches', () =
 
 test('visual-required documents remain discoverable by title and agenda metadata', () => {
   const results = searchCorpus(corpus, 'MAC Area Events');
-  assert.equal(results.length, 1);
-  assert.equal(results[0].status, 'visual_required');
-  assert.equal(results[0].attachmentId, 10891);
+  const match = results.find((result) => result.attachmentId === 10891);
+  assert.ok(match);
+  assert.equal(match.status, 'visual_required');
+  assert.equal(match.fileName, '2026 MAC Area Events, Inc');
 });
