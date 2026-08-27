@@ -43,23 +43,19 @@ function assertCivicClerkAttachmentUrl(downloadUrl) {
   return url;
 }
 
-function assertCivicClerkMeetingFileUrl(downloadUrl, tenant) {
+export function assertCivicClerkMeetingFileUrl(downloadUrl, tenant) {
   const url = new URL(downloadUrl);
   if (url.protocol !== 'https:') throw new Error('CivicClerk meeting file URL must use HTTPS');
   const expectedHost = `${String(tenant).toLowerCase()}.api.civicclerk.com`;
   if (url.hostname.toLowerCase() !== expectedHost) {
     throw new Error(`Unsupported CivicClerk meeting file host: ${url.hostname}`);
   }
-  if (url.pathname !== '/v1/Meetings/GetMeetingFileStream') {
+  const match = url.pathname.match(/^\/v1\/Meetings\/GetMeetingFileStream\(fileId=(\d+),plainText=false\)$/);
+  if (!match) {
     throw new Error(`Unsupported CivicClerk meeting file path: ${url.pathname}`);
   }
-  if (!/^\d+$/.test(url.searchParams.get('fileId') || '')) {
-    throw new Error('CivicClerk meeting file URL is missing a numeric fileId');
-  }
-  if (url.searchParams.get('plainText') !== 'false') {
-    throw new Error('Binary meeting file URL must request plainText=false');
-  }
-  return url;
+  if (url.search) throw new Error('CivicClerk meeting file URL must not contain query parameters');
+  return { url, fileId: Number(match[1]) };
 }
 
 async function fetchPdfUrl(url, { maxBytes = DEFAULT_MAX_PDF_BYTES, label = 'PDF' } = {}) {
@@ -105,8 +101,11 @@ export function meetingFilePdfUrl(tenant, fileId) {
 
 export async function fetchMeetingPdfBytes(tenant, fileId, { maxBytes = DEFAULT_MAX_PDF_BYTES } = {}) {
   const sourceUrl = meetingFilePdfUrl(tenant, fileId);
-  const url = assertCivicClerkMeetingFileUrl(sourceUrl, tenant);
-  const fetched = await fetchPdfUrl(url, { maxBytes, label: 'Meeting file' });
+  const validated = assertCivicClerkMeetingFileUrl(sourceUrl, tenant);
+  if (validated.fileId !== Number(fileId)) {
+    throw new Error(`CivicClerk meeting file ID mismatch: ${validated.fileId} != ${Number(fileId)}`);
+  }
+  const fetched = await fetchPdfUrl(validated.url, { maxBytes, label: 'Meeting file' });
   return {
     ...fetched,
     sourceUrl,
