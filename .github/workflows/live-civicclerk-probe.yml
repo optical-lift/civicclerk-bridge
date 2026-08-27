@@ -64,7 +64,13 @@ jobs:
           const items = data.agendaItems ?? [];
           if (!Array.isArray(items) || items.length === 0) throw new Error('Structured agenda items missing');
 
-          const attachments = data.attachments ?? [];
+          const attachments = items.flatMap(item =>
+            (item.attachments ?? []).map(attachment => ({
+              agendaItemId: item.id,
+              agendaItemName: item.name,
+              ...attachment
+            }))
+          );
           const cornicupiaBudget = attachments.find(a => a.id === 11012 && /Cornicupia 2026 Event Budget/i.test(a.fileName || ''));
           if (!cornicupiaBudget?.downloadUrl) throw new Error('Cornicupia 2026 Event Budget attachment missing');
 
