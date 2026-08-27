@@ -63,7 +63,7 @@ async function fetchPdfUrl(url, { maxBytes = DEFAULT_MAX_PDF_BYTES, label = 'PDF
     redirect: 'follow',
     headers: {
       accept: 'application/pdf,*/*;q=0.8',
-      'user-agent': 'CivicClerk-Bridge/0.5 (+read-only municipal records)',
+      'user-agent': 'CivicClerk-Bridge/0.6 (+read-only municipal records)',
     },
   });
 
@@ -197,8 +197,9 @@ export function visualPageDescriptors({ tenant, body, date, attachmentId, pageCo
 
 export async function readCivicClerkAttachment(attachment, options = {}) {
   if (!attachment?.downloadUrl) throw new Error('Attachment has no downloadable PDF URL');
-  const fetched = await fetchPdfBytes(attachment.downloadUrl, options);
-  const extracted = await extractPdfText(fetched.bytes, options);
+  const { includeBytes = false, ...readerOptions } = options;
+  const fetched = await fetchPdfBytes(attachment.downloadUrl, readerOptions);
+  const extracted = await extractPdfText(fetched.bytes, readerOptions);
 
   return {
     attachmentId: Number(attachment.id),
@@ -210,14 +211,16 @@ export async function readCivicClerkAttachment(attachment, options = {}) {
     contentType: fetched.contentType,
     sha256: fetched.sha256,
     ...extracted,
+    ...(includeBytes ? { bytes: fetched.bytes } : {}),
   };
 }
 
 export async function readCivicClerkMeetingFile(tenant, file, options = {}) {
   const fileId = Number(file?.fileId ?? file?.id);
   if (!Number.isFinite(fileId)) throw new Error('Meeting file has no numeric fileId');
-  const fetched = await fetchMeetingPdfBytes(tenant, fileId, options);
-  const extracted = await extractPdfText(fetched.bytes, options);
+  const { includeBytes = false, ...readerOptions } = options;
+  const fetched = await fetchMeetingPdfBytes(tenant, fileId, readerOptions);
+  const extracted = await extractPdfText(fetched.bytes, readerOptions);
   return {
     fileId,
     fileName: file?.name || null,
@@ -227,5 +230,6 @@ export async function readCivicClerkMeetingFile(tenant, file, options = {}) {
     contentType: fetched.contentType,
     sha256: fetched.sha256,
     ...extracted,
+    ...(includeBytes ? { bytes: fetched.bytes } : {}),
   };
 }
