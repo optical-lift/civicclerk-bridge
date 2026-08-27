@@ -1,0 +1,11 @@
+{
+  "name": "civicclerk-bridge-step1",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "probe:mitchell": "node src/cli.mjs --tenant mitchellsd --body \"Sports & Events Authority\" --date 2026-08-18"
+  },
+  "engines": {"node": ">=20"}
+}
