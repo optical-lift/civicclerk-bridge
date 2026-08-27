@@ -59,12 +59,60 @@ jobs:
           }, null, 2));
           NODE
 
+      - name: Probe visual page rendering on likely scanned thank-you card
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import {
+            fetchPdfBytes,
+            readCivicClerkAttachment,
+            renderPdfPage,
+            selectAttachmentById,
+          } from './src/document-reader.mjs';
+          const data = JSON.parse(fs.readFileSync('probe.json', 'utf8'));
+          const attachment = selectAttachmentById(data.agendaItems || [], 10891);
+          if (!attachment) throw new Error('MAC thank-you attachment 10891 missing');
+          const document = await readCivicClerkAttachment(attachment);
+          const fetched = await fetchPdfBytes(attachment.downloadUrl);
+          const page = await renderPdfPage(fetched.bytes, { page: 1, width: 1200 });
+          fs.writeFileSync('visual-probe-document.json', JSON.stringify(document, null, 2));
+          fs.writeFileSync('visual-probe-page-1.png', Buffer.from(page.bytes));
+          fs.writeFileSync('visual-probe-render.json', JSON.stringify({
+            page: page.page,
+            pageCount: page.pageCount,
+            width: page.width,
+            height: page.height,
+            scale: page.scale,
+            contentType: page.contentType,
+            byteLength: page.bytes.length,
+            sourceSha256: fetched.sha256,
+          }, null, 2));
+          console.log(JSON.stringify({
+            attachmentId: document.attachmentId,
+            fileName: document.fileName,
+            status: document.status,
+            characters: document.characters,
+            pageCount: document.pageCount,
+            textPreview: document.text.slice(0, 500),
+            render: {
+              page: page.page,
+              width: page.width,
+              height: page.height,
+              bytes: page.bytes.length,
+              contentType: page.contentType,
+            }
+          }, null, 2));
+          NODE
+
       - name: Assert Aug. 18 SEA source custody and document reading
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           const data = JSON.parse(fs.readFileSync('probe.json', 'utf8'));
           const document = JSON.parse(fs.readFileSync('cornicupia-budget.json', 'utf8'));
+          const visualDocument = JSON.parse(fs.readFileSync('visual-probe-document.json', 'utf8'));
+          const visualRender = JSON.parse(fs.readFileSync('visual-probe-render.json', 'utf8'));
+          const image = fs.readFileSync('visual-probe-page-1.png');
           const files = data.event?.publishedFiles || [];
           const minute = data.minutesFile || files.find(f => /minutes/i.test(`${f.type || ''} ${f.name || ''}`));
           const allIds = files.map(f => Number(f.fileId ?? f.file_id ?? f.id));
@@ -82,9 +130,7 @@ jobs:
           if (agendaId !== 1509) throw new Error(`Expected agenda 1509, got ${agendaId}`);
 
           const minutesText = data.minutesText ?? '';
-          if (typeof minutesText !== 'string' || minutesText.trim().length < 1000) {
-            throw new Error('Minutes text missing or unexpectedly short');
-          }
+          if (typeof minutesText !== 'string' || minutesText.trim().length < 1000) throw new Error('Minutes text missing or unexpectedly short');
           if (!minutesText.includes('Cornicupia 2026')) throw new Error('Expected Cornicupia 2026 in minutes');
           if (!minutesText.includes('referee fees')) throw new Error('Expected referee-fee text in minutes');
 
@@ -92,6 +138,7 @@ jobs:
           if (!Array.isArray(items) || items.length === 0) throw new Error('Structured agenda items missing');
           const attachments = items.flatMap(item => item.attachments ?? []);
           if (!attachments.some(a => Number(a.id) === 11012)) throw new Error('Cornicupia budget attachment missing from structured agenda');
+          if (!attachments.some(a => Number(a.id) === 10891)) throw new Error('MAC visual probe attachment missing from structured agenda');
 
           if (document.attachmentId !== 11012) throw new Error(`Expected attachment 11012, got ${document.attachmentId}`);
           if (document.agendaItemId !== 10930) throw new Error(`Expected Cornicupia agenda item 10930, got ${document.agendaItemId}`);
@@ -103,6 +150,14 @@ jobs:
           if (!/Referees\s*-\s*\$7500/i.test(document.text || '')) throw new Error('Expected Referees - $7500 budget line');
           if (!/\$13,200\.00/.test(document.text || '')) throw new Error('Expected $13,200.00 total estimated expenses');
 
+          if (visualDocument.attachmentId !== 10891) throw new Error(`Expected visual attachment 10891, got ${visualDocument.attachmentId}`);
+          if (visualRender.page !== 1) throw new Error('Visual fallback did not render page 1');
+          if (visualRender.byteLength < 1000) throw new Error(`Visual fallback PNG unexpectedly small: ${visualRender.byteLength}`);
+          if (visualRender.contentType !== 'image/png') throw new Error(`Unexpected visual content type: ${visualRender.contentType}`);
+          const pngMagic = image.length >= 8 && image[0] === 0x89 && image[1] === 0x50 && image[2] === 0x4e && image[3] === 0x47;
+          if (!pngMagic) throw new Error('Visual fallback output is not a PNG');
+          if (visualRender.sourceSha256 !== visualDocument.sha256) throw new Error('Visual render and document extraction did not share source custody');
+
           console.log(JSON.stringify({
             ok: true,
             eventId,
@@ -112,17 +167,22 @@ jobs:
             minutesCharacters: minutesText.length,
             agendaItems: items.length,
             attachments: attachments.length,
-            document: {
+            textDocument: {
               attachmentId: document.attachmentId,
-              fileName: document.fileName,
               pageCount: document.pageCount,
               characters: document.characters,
-              byteLength: document.byteLength,
               sha256: document.sha256,
-              verifiedFacts: {
-                referees: 7500,
-                totalEstimatedExpenses: 13200
-              }
+              verifiedFacts: { referees: 7500, totalEstimatedExpenses: 13200 }
+            },
+            visualProbe: {
+              attachmentId: visualDocument.attachmentId,
+              status: visualDocument.status,
+              characters: visualDocument.characters,
+              pageCount: visualDocument.pageCount,
+              pngBytes: visualRender.byteLength,
+              width: visualRender.width,
+              height: visualRender.height,
+              sha256: visualDocument.sha256
             }
           }, null, 2));
           NODE
@@ -135,4 +195,7 @@ jobs:
           path: |
             probe.json
             cornicupia-budget.json
+            visual-probe-document.json
+            visual-probe-render.json
+            visual-probe-page-1.png
           if-no-files-found: ignore
