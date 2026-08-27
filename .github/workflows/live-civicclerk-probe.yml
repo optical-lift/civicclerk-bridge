@@ -100,6 +100,8 @@ jobs:
           if (!Number.isInteger(document.characters) || document.characters < 100) throw new Error(`PDF text unexpectedly short: ${document.characters}`);
           if (!/^[a-f0-9]{64}$/.test(document.sha256 || '')) throw new Error('PDF SHA-256 missing');
           if (!Array.isArray(document.pages) || document.pages.length < 1) throw new Error('Per-page text missing');
+          if (!/Referees\s*-\s*\$7500/i.test(document.text || '')) throw new Error('Expected Referees - $7500 budget line');
+          if (!/\$13,200\.00/.test(document.text || '')) throw new Error('Expected $13,200.00 total estimated expenses');
 
           console.log(JSON.stringify({
             ok: true,
@@ -116,7 +118,11 @@ jobs:
               pageCount: document.pageCount,
               characters: document.characters,
               byteLength: document.byteLength,
-              sha256: document.sha256
+              sha256: document.sha256,
+              verifiedFacts: {
+                referees: 7500,
+                totalEstimatedExpenses: 13200
+              }
             }
           }, null, 2));
           NODE
