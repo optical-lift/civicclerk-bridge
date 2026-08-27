@@ -19,7 +19,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Run contract tests
         run: npm test
@@ -33,13 +33,13 @@ jobs:
             > probe.json
           cat probe.json
 
-      - name: Assert Aug. 18 SEA source custody
+      - name: Assert Aug. 18 SEA source custody and attachment access
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           const data = JSON.parse(fs.readFileSync('probe.json', 'utf8'));
-          const files = data.files || data.publishedFiles || data.meeting?.publishedFiles || [];
-          const minute = data.minutesFile || data.minutes?.file || files.find(f => /minutes/i.test(`${f.type || ''} ${f.name || ''}`));
+          const files = data.event?.publishedFiles || [];
+          const minute = data.minutesFile || files.find(f => /minutes/i.test(`${f.type || ''} ${f.name || ''}`));
           const allIds = files.map(f => Number(f.fileId ?? f.file_id ?? f.id));
 
           if (!minute) throw new Error('No minutes file selected');
@@ -49,18 +49,33 @@ jobs:
           if (!allIds.includes(5346)) throw new Error('Agenda Packet file 5346 missing');
           if (!allIds.includes(5349)) throw new Error('Minutes file 5349 missing');
 
-          const eventId = data.event?.id ?? data.meeting?.id ?? data.eventId;
-          const agendaId = data.event?.agendaId ?? data.meeting?.agendaId ?? data.agendaId ?? data.agenda?.id;
-          if (!eventId) throw new Error('Event ID missing');
-          if (!agendaId) throw new Error('Agenda ID missing');
+          const eventId = data.event?.id;
+          const agendaId = data.event?.agendaId ?? data.agenda?.id;
+          if (eventId !== 1540) throw new Error(`Expected event 1540, got ${eventId}`);
+          if (agendaId !== 1509) throw new Error(`Expected agenda 1509, got ${agendaId}`);
 
-          const minutesText = data.minutesText ?? data.minutes?.text ?? '';
-          if (typeof minutesText !== 'string' || minutesText.trim().length < 100) {
+          const minutesText = data.minutesText ?? '';
+          if (typeof minutesText !== 'string' || minutesText.trim().length < 1000) {
             throw new Error('Minutes text missing or unexpectedly short');
           }
+          if (!minutesText.includes('Cornicupia 2026')) throw new Error('Expected Cornicupia 2026 in minutes');
+          if (!minutesText.includes('referee fees')) throw new Error('Expected referee-fee text in minutes');
 
-          const items = data.agenda?.items ?? data.agendaItems ?? [];
+          const items = data.agendaItems ?? [];
           if (!Array.isArray(items) || items.length === 0) throw new Error('Structured agenda items missing');
+
+          const attachments = data.attachments ?? [];
+          const cornicupiaBudget = attachments.find(a => a.id === 11012 && /Cornicupia 2026 Event Budget/i.test(a.fileName || ''));
+          if (!cornicupiaBudget?.downloadUrl) throw new Error('Cornicupia 2026 Event Budget attachment missing');
+
+          const response = await fetch(cornicupiaBudget.downloadUrl, { redirect: 'follow' });
+          if (!response.ok) throw new Error(`Attachment fetch failed: HTTP ${response.status}`);
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          if (bytes.length < 1000) throw new Error(`Attachment unexpectedly small: ${bytes.length} bytes`);
+          const contentType = response.headers.get('content-type') || '';
+          if (!/pdf/i.test(contentType) && !(bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46)) {
+            throw new Error(`Cornicupia budget did not resolve to a PDF; content-type=${contentType}`);
+          }
 
           console.log(JSON.stringify({
             ok: true,
@@ -69,7 +84,14 @@ jobs:
             minuteId,
             publishedFileIds: allIds,
             minutesCharacters: minutesText.length,
-            topLevelAgendaItems: items.length
+            agendaItems: items.length,
+            attachments: attachments.length,
+            selectedAttachment: {
+              id: cornicupiaBudget.id,
+              fileName: cornicupiaBudget.fileName,
+              bytes: bytes.length,
+              contentType
+            }
           }, null, 2));
           NODE
 
