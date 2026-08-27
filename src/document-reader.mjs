@@ -199,7 +199,11 @@ export async function readCivicClerkAttachment(attachment, options = {}) {
   if (!attachment?.downloadUrl) throw new Error('Attachment has no downloadable PDF URL');
   const { includeBytes = false, ...readerOptions } = options;
   const fetched = await fetchPdfBytes(attachment.downloadUrl, readerOptions);
-  const extracted = await extractPdfText(fetched.bytes, readerOptions);
+  // pdf-parse may transfer ownership of TypedArray data into its worker. When a
+  // downstream visual/OCR path needs the source bytes, extract from a clone so
+  // the original fetched bytes remain intact and source-custodied in memory.
+  const extractionBytes = includeBytes ? fetched.bytes.slice() : fetched.bytes;
+  const extracted = await extractPdfText(extractionBytes, readerOptions);
 
   return {
     attachmentId: Number(attachment.id),
@@ -220,7 +224,8 @@ export async function readCivicClerkMeetingFile(tenant, file, options = {}) {
   if (!Number.isFinite(fileId)) throw new Error('Meeting file has no numeric fileId');
   const { includeBytes = false, ...readerOptions } = options;
   const fetched = await fetchMeetingPdfBytes(tenant, fileId, readerOptions);
-  const extracted = await extractPdfText(fetched.bytes, readerOptions);
+  const extractionBytes = includeBytes ? fetched.bytes.slice() : fetched.bytes;
+  const extracted = await extractPdfText(extractionBytes, readerOptions);
   return {
     fileId,
     fileName: file?.name || null,
