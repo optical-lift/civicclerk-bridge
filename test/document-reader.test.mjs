@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  assertCivicClerkMeetingFileUrl,
   isPdfMagic,
   meetingFilePdfUrl,
   needsVisualFallback,
@@ -31,10 +32,22 @@ test('attachment selection preserves agenda-item custody', () => {
   assert.equal(attachment.fileName, 'Cornicupia 2026 Event Budget');
 });
 
-test('binary meeting file reader uses the fixed CivicClerk file-stream endpoint', () => {
+test('binary meeting file reader uses and validates the CivicClerk OData file-stream endpoint', () => {
+  const source = meetingFilePdfUrl('mitchellsd', 5349);
   assert.equal(
-    meetingFilePdfUrl('mitchellsd', 5349),
+    source,
     'https://mitchellsd.api.civicclerk.com/v1/Meetings/GetMeetingFileStream(fileId=5349,plainText=false)',
+  );
+  const validated = assertCivicClerkMeetingFileUrl(source, 'mitchellsd');
+  assert.equal(validated.fileId, 5349);
+  assert.equal(validated.url.hostname, 'mitchellsd.api.civicclerk.com');
+  assert.throws(
+    () => assertCivicClerkMeetingFileUrl('https://example.com/v1/Meetings/GetMeetingFileStream(fileId=5349,plainText=false)', 'mitchellsd'),
+    /Unsupported CivicClerk meeting file host/,
+  );
+  assert.throws(
+    () => assertCivicClerkMeetingFileUrl('https://mitchellsd.api.civicclerk.com/v1/Meetings/GetMeetingFileStream(fileId=5349,plainText=true)', 'mitchellsd'),
+    /Unsupported CivicClerk meeting file path/,
   );
 });
 
