@@ -1,5 +1,10 @@
 import { resolveMeeting } from '../src/civicclerk.mjs';
-import { readCivicClerkAttachment, selectAttachmentById } from '../src/document-reader.mjs';
+import {
+  needsVisualFallback,
+  readCivicClerkAttachment,
+  selectAttachmentById,
+  visualPageDescriptors,
+} from '../src/document-reader.mjs';
 
 export default async function handler(req, res) {
   const tenant = String(req.query?.tenant || 'mitchellsd');
@@ -25,6 +30,19 @@ export default async function handler(req, res) {
     }
 
     const document = await readCivicClerkAttachment(attachment);
+    const visualRequired = needsVisualFallback(document);
+    const visual = {
+      required: visualRequired,
+      reason: visualRequired ? 'PDF has too little embedded text for reliable reading' : null,
+      pages: visualRequired ? visualPageDescriptors({
+        tenant,
+        body,
+        date,
+        attachmentId,
+        pageCount: document.pageCount,
+      }) : [],
+    };
+
     res.setHeader('cache-control', 'public, max-age=60, s-maxage=86400');
     res.status(200).json({
       tenant,
@@ -36,6 +54,7 @@ export default async function handler(req, res) {
         categoryName: meeting.event.categoryName,
       },
       document,
+      visual,
       provenance: {
         agendaApi: meeting.provenance.agendaApi,
         retrievedAt: new Date().toISOString(),
