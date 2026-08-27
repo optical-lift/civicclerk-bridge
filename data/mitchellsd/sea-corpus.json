@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "tenant": "mitchellsd",
+  "body": "Sports & Events Authority Advisory Committee",
+  "categoryId": 42,
+  "requestedCoverage": { "from": "2023-01-01", "to": "2026-12-31" },
+  "stats": {
+    "meetings": 0,
+    "documents": 0,
+    "minutesDocuments": 0,
+    "attachmentDocuments": 0,
+    "textDocuments": 0,
+    "visualRequired": 0,
+    "readFailed": 0,
+    "years": {}
+  },
+  "meetings": [],
+  "documents": []
+}

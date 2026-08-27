@@ -1,11 +1,12 @@
 {
   "name": "civicclerk-bridge",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "probe:mitchell": "node src/cli.mjs --tenant mitchellsd --body \"Sports & Events Authority\" --date 2026-08-18"
+    "probe:mitchell": "node src/cli.mjs --tenant mitchellsd --body \"Sports & Events Authority\" --date 2026-08-18",
+    "build:sea-corpus": "node scripts/build-corpus.mjs --tenant mitchellsd --body \"Sports & Events Authority\" --from 2023-01-01 --to 2026-12-31 --output data/mitchellsd/sea-corpus.json"
   },
   "dependencies": {
     "pdf-parse": "2.4.5"

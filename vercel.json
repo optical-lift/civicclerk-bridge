@@ -1,5 +1,11 @@
 {
   "functions": {
-    "api/meeting.mjs": { "maxDuration": 30 }
+    "api/meeting.mjs": { "maxDuration": 30 },
+    "api/document.mjs": { "maxDuration": 30 },
+    "api/page.mjs": { "maxDuration": 30 },
+    "api/search.mjs": {
+      "maxDuration": 30,
+      "includeFiles": "data/mitchellsd/sea-corpus.json"
+    }
   }
 }

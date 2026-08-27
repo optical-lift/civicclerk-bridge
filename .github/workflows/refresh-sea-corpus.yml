@@ -1,0 +1,84 @@
+name: Refresh Mitchell SEA corpus
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'scripts/**'
+      - 'test/**'
+      - 'api/**'
+      - 'package.json'
+      - 'vercel.json'
+      - '.github/workflows/refresh-sea-corpus.yml'
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'data/**'
+  schedule:
+    - cron: '17 12 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-sea-corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run contract tests
+        run: npm test
+
+      - name: Build 2023-2026 Mitchell SEA corpus
+        run: npm run build:sea-corpus
+
+      - name: Validate corpus custody and coverage report
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const corpus = JSON.parse(fs.readFileSync('data/mitchellsd/sea-corpus.json', 'utf8'));
+          if (corpus.schemaVersion !== 1) throw new Error(`Unexpected corpus schema ${corpus.schemaVersion}`);
+          if (corpus.categoryId !== 42) throw new Error(`Expected SEA category 42, got ${corpus.categoryId}`);
+          if (corpus.requestedCoverage?.from !== '2023-01-01' || corpus.requestedCoverage?.to !== '2026-12-31') {
+            throw new Error('Historical coverage bounds changed unexpectedly');
+          }
+          if (!Array.isArray(corpus.meetings) || corpus.meetings.length < 1) throw new Error('No SEA meetings indexed');
+          if (!Array.isArray(corpus.documents) || corpus.documents.length < 1) throw new Error('No SEA documents indexed');
+          for (const document of corpus.documents) {
+            if (!document.id || !document.eventId || !document.meetingDate) throw new Error(`Document missing meeting custody: ${JSON.stringify(document)}`);
+            if (document.kind === 'attachment' && !document.attachmentId) throw new Error(`Attachment document missing attachmentId: ${document.id}`);
+            if (document.downloadUrl) throw new Error(`Expiring signed URL leaked into durable corpus: ${document.id}`);
+          }
+          console.log(JSON.stringify(corpus.stats, null, 2));
+          NODE
+
+      - name: Upload corpus evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: mitchell-sea-corpus
+          path: data/mitchellsd/sea-corpus.json
+          retention-days: 14
+
+      - name: Commit refreshed corpus when material changed
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name 'civicclerk-bridge[bot]'
+          git config user.email 'civicclerk-bridge[bot]@users.noreply.github.com'
+          git add data/mitchellsd/sea-corpus.json
+          if git diff --cached --quiet; then
+            echo 'Corpus unchanged.'
+          else
+            git commit -m 'Refresh Mitchell SEA CivicClerk corpus [skip ci]'
+            git push
+          fi
