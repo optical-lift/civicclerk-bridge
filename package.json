@@ -1,6 +1,6 @@
 {
-  "name": "civicclerk-bridge-step2",
-  "version": "0.2.0",
+  "name": "civicclerk-bridge",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
