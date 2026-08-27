@@ -36,6 +36,17 @@ const corpus = await buildCivicClerkCorpus({
 await fs.mkdir(path.dirname(output), { recursive: true });
 await fs.writeFile(output, `${JSON.stringify(corpus, null, 2)}\n`, 'utf8');
 
+const sampleOcrFailures = corpus.documents
+  .filter((document) => document.ocrStatus === 'ocr_failed')
+  .slice(0, 5)
+  .map((document) => ({
+    id: document.id,
+    attachmentId: document.attachmentId,
+    fileName: document.fileName,
+    pageCount: document.pageCount,
+    ocrError: document.ocrError,
+  }));
+
 console.log(JSON.stringify({
   output,
   tenant: corpus.tenant,
@@ -44,4 +55,5 @@ console.log(JSON.stringify({
   requestedCoverage: corpus.requestedCoverage,
   extraction: corpus.extraction,
   stats: corpus.stats,
+  sampleOcrFailures,
 }, null, 2));
