@@ -43,7 +43,7 @@ jobs:
       - name: Build 2023-2026 Mitchell SEA corpus
         run: npm run build:sea-corpus
 
-      - name: Validate corpus custody and coverage report
+      - name: Validate corpus custody and minutes coverage
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
@@ -59,6 +59,20 @@ jobs:
             if (!document.id || !document.eventId || !document.meetingDate) throw new Error(`Document missing meeting custody: ${JSON.stringify(document)}`);
             if (document.kind === 'attachment' && !document.attachmentId) throw new Error(`Attachment document missing attachmentId: ${document.id}`);
             if (document.downloadUrl) throw new Error(`Expiring signed URL leaked into durable corpus: ${document.id}`);
+            if (document.kind === 'minutes' && document.status === 'no_usable_text') {
+              throw new Error(`Published minutes were left unread after fallback: ${document.id}`);
+            }
+          }
+          const stats = corpus.stats || {};
+          const accountedMinutes = Number(stats.minutesTextExtracted || 0) + Number(stats.minutesVisualRequired || 0) + Number(stats.minutesReadFailed || 0);
+          if (accountedMinutes !== Number(stats.minutesDocuments || 0)) {
+            throw new Error(`Minutes status accounting mismatch: ${accountedMinutes} != ${stats.minutesDocuments}`);
+          }
+          if (Number(stats.minutesReadFailed || 0) !== 0) {
+            throw new Error(`Published minutes still unreadable after binary fallback: ${stats.minutesReadFailed}`);
+          }
+          if (Number(stats.minutesBinaryFallback || 0) < 1) {
+            throw new Error('Minutes binary fallback was not exercised by the live historical corpus');
           }
           console.log(JSON.stringify(corpus.stats, null, 2));
           NODE
