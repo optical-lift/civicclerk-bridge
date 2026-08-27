@@ -1,0 +1,82 @@
+name: Live CivicClerk acceptance probe
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mitchell-sea-2026-08-18:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run contract tests
+        run: npm test
+
+      - name: Run live Mitchell CivicClerk probe
+        run: |
+          node src/cli.mjs \
+            --tenant mitchellsd \
+            --body "Sports & Events Authority" \
+            --date 2026-08-18 \
+            > probe.json
+          cat probe.json
+
+      - name: Assert Aug. 18 SEA source custody
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const data = JSON.parse(fs.readFileSync('probe.json', 'utf8'));
+          const files = data.files || data.publishedFiles || data.meeting?.publishedFiles || [];
+          const minute = data.minutesFile || data.minutes?.file || files.find(f => /minutes/i.test(`${f.type || ''} ${f.name || ''}`));
+          const allIds = files.map(f => Number(f.fileId ?? f.file_id ?? f.id));
+
+          if (!minute) throw new Error('No minutes file selected');
+          const minuteId = Number(minute.fileId ?? minute.file_id ?? minute.id);
+          if (minuteId !== 5349) throw new Error(`Expected minutes file 5349, got ${minuteId}`);
+          if (!allIds.includes(5344)) throw new Error('Agenda file 5344 missing');
+          if (!allIds.includes(5346)) throw new Error('Agenda Packet file 5346 missing');
+          if (!allIds.includes(5349)) throw new Error('Minutes file 5349 missing');
+
+          const eventId = data.event?.id ?? data.meeting?.id ?? data.eventId;
+          const agendaId = data.event?.agendaId ?? data.meeting?.agendaId ?? data.agendaId ?? data.agenda?.id;
+          if (!eventId) throw new Error('Event ID missing');
+          if (!agendaId) throw new Error('Agenda ID missing');
+
+          const minutesText = data.minutesText ?? data.minutes?.text ?? '';
+          if (typeof minutesText !== 'string' || minutesText.trim().length < 100) {
+            throw new Error('Minutes text missing or unexpectedly short');
+          }
+
+          const items = data.agenda?.items ?? data.agendaItems ?? [];
+          if (!Array.isArray(items) || items.length === 0) throw new Error('Structured agenda items missing');
+
+          console.log(JSON.stringify({
+            ok: true,
+            eventId,
+            agendaId,
+            minuteId,
+            publishedFileIds: allIds,
+            minutesCharacters: minutesText.length,
+            topLevelAgendaItems: items.length
+          }, null, 2));
+          NODE
+
+      - name: Upload probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mitchell-sea-2026-08-18-probe
+          path: probe.json
+          if-no-files-found: ignore
