@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { PDFParse } from 'pdf-parse';
+import { meetingFileUrl } from './civicclerk.mjs';
 
 export const DEFAULT_MAX_PDF_BYTES = 25 * 1024 * 1024;
 export const DEFAULT_MIN_TEXT_CHARACTERS = 20;
@@ -42,33 +43,73 @@ function assertCivicClerkAttachmentUrl(downloadUrl) {
   return url;
 }
 
-export async function fetchPdfBytes(downloadUrl, { maxBytes = DEFAULT_MAX_PDF_BYTES } = {}) {
-  const url = assertCivicClerkAttachmentUrl(downloadUrl);
+function assertCivicClerkMeetingFileUrl(downloadUrl, tenant) {
+  const url = new URL(downloadUrl);
+  if (url.protocol !== 'https:') throw new Error('CivicClerk meeting file URL must use HTTPS');
+  const expectedHost = `${String(tenant).toLowerCase()}.api.civicclerk.com`;
+  if (url.hostname.toLowerCase() !== expectedHost) {
+    throw new Error(`Unsupported CivicClerk meeting file host: ${url.hostname}`);
+  }
+  if (url.pathname !== '/v1/Meetings/GetMeetingFileStream') {
+    throw new Error(`Unsupported CivicClerk meeting file path: ${url.pathname}`);
+  }
+  if (!/^\d+$/.test(url.searchParams.get('fileId') || '')) {
+    throw new Error('CivicClerk meeting file URL is missing a numeric fileId');
+  }
+  if (url.searchParams.get('plainText') !== 'false') {
+    throw new Error('Binary meeting file URL must request plainText=false');
+  }
+  return url;
+}
+
+async function fetchPdfUrl(url, { maxBytes = DEFAULT_MAX_PDF_BYTES, label = 'PDF' } = {}) {
   const response = await fetch(url, {
     redirect: 'follow',
     headers: {
       accept: 'application/pdf,*/*;q=0.8',
-      'user-agent': 'CivicClerk-Bridge/0.3 (+read-only municipal records)',
+      'user-agent': 'CivicClerk-Bridge/0.5 (+read-only municipal records)',
     },
   });
 
-  if (!response.ok) throw new Error(`Attachment fetch failed: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`${label} fetch failed: HTTP ${response.status}`);
 
   const declaredLength = Number(response.headers.get('content-length') || 0);
   if (declaredLength > maxBytes) {
-    throw new Error(`Attachment exceeds ${maxBytes} byte extraction limit`);
+    throw new Error(`${label} exceeds ${maxBytes} byte extraction limit`);
   }
 
   const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.length > maxBytes) throw new Error(`Attachment exceeds ${maxBytes} byte extraction limit`);
-  if (!isPdfMagic(bytes)) throw new Error('Attachment is not a PDF');
+  if (bytes.length > maxBytes) throw new Error(`${label} exceeds ${maxBytes} byte extraction limit`);
+  if (!isPdfMagic(bytes)) throw new Error(`${label} is not a PDF`);
 
   return {
     bytes,
     byteLength: bytes.length,
     contentType: response.headers.get('content-type') || 'application/pdf',
     sha256: createHash('sha256').update(bytes).digest('hex'),
+  };
+}
+
+export async function fetchPdfBytes(downloadUrl, { maxBytes = DEFAULT_MAX_PDF_BYTES } = {}) {
+  const url = assertCivicClerkAttachmentUrl(downloadUrl);
+  const fetched = await fetchPdfUrl(url, { maxBytes, label: 'Attachment' });
+  return {
+    ...fetched,
     sourceUrl: publicSourceUrl(downloadUrl),
+  };
+}
+
+export function meetingFilePdfUrl(tenant, fileId) {
+  return meetingFileUrl(tenant, fileId, { plainText: false });
+}
+
+export async function fetchMeetingPdfBytes(tenant, fileId, { maxBytes = DEFAULT_MAX_PDF_BYTES } = {}) {
+  const sourceUrl = meetingFilePdfUrl(tenant, fileId);
+  const url = assertCivicClerkMeetingFileUrl(sourceUrl, tenant);
+  const fetched = await fetchPdfUrl(url, { maxBytes, label: 'Meeting file' });
+  return {
+    ...fetched,
+    sourceUrl,
   };
 }
 
@@ -165,6 +206,23 @@ export async function readCivicClerkAttachment(attachment, options = {}) {
     fileName: attachment.fileName || null,
     agendaItemId: attachment.agendaItemId == null ? null : Number(attachment.agendaItemId),
     agendaItemName: attachment.agendaItemName || null,
+    sourceUrl: fetched.sourceUrl,
+    byteLength: fetched.byteLength,
+    contentType: fetched.contentType,
+    sha256: fetched.sha256,
+    ...extracted,
+  };
+}
+
+export async function readCivicClerkMeetingFile(tenant, file, options = {}) {
+  const fileId = Number(file?.fileId ?? file?.id);
+  if (!Number.isFinite(fileId)) throw new Error('Meeting file has no numeric fileId');
+  const fetched = await fetchMeetingPdfBytes(tenant, fileId, options);
+  const extracted = await extractPdfText(fetched.bytes, options);
+  return {
+    fileId,
+    fileName: file?.name || null,
+    sourceType: file?.type || null,
     sourceUrl: fetched.sourceUrl,
     byteLength: fetched.byteLength,
     contentType: fetched.contentType,
