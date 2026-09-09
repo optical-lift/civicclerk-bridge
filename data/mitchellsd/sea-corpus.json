@@ -9,16 +9,16 @@
   },
   "stats": {
     "meetings": 48,
-    "documents": 1222,
-    "minutesDocuments": 44,
+    "documents": 1223,
+    "minutesDocuments": 45,
     "attachmentDocuments": 1178,
-    "textDocuments": 1025,
+    "textDocuments": 1026,
     "visualRequired": 197,
     "readFailed": 0,
-    "minutesTextExtracted": 44,
+    "minutesTextExtracted": 45,
     "minutesVisualRequired": 0,
     "minutesReadFailed": 0,
-    "minutesBinaryFallback": 5,
+    "minutesBinaryFallback": 6,
     "years": {
       "2023": {
         "meetings": 12,
@@ -58,15 +58,15 @@
       },
       "2026": {
         "meetings": 12,
-        "documents": 274,
-        "textDocuments": 244,
+        "documents": 275,
+        "textDocuments": 245,
         "visualRequired": 30,
         "readFailed": 0,
-        "minutesPublished": 8,
-        "minutesTextExtracted": 8,
+        "minutesPublished": 9,
+        "minutesTextExtracted": 9,
         "minutesVisualRequired": 0,
         "minutesReadFailed": 0,
-        "minutesBinaryFallback": 5
+        "minutesBinaryFallback": 6
       }
     }
   },
@@ -1002,16 +1002,17 @@
       "name": "Sports & Events Authority Advisory Committee",
       "categoryId": 42,
       "categoryName": "Sports & Events Authority Advisory Committee",
-      "minutesFileId": null,
+      "minutesFileId": 5368,
       "publishedFileIds": [
         5366,
-        5367
+        5367,
+        5368
       ],
       "agendaItemCount": 15,
       "attachmentCount": 17,
       "agendaStatus": "available",
-      "minutesStatus": "not_published",
-      "minutesReadMethod": null,
+      "minutesStatus": "text_extracted",
+      "minutesReadMethod": "meeting_pdf",
       "agendaError": null,
       "minutesError": null
     },
@@ -30031,6 +30032,31 @@
       "sha256": "37bbdabfe6e126f13fe07474aabc3aea53744d95f185caccc2a0d6e66e2dc11a",
       "text": "",
       "error": null
+    },
+    {
+      "id": "1549:meeting-file:5368",
+      "kind": "minutes",
+      "tenant": "mitchellsd",
+      "body": "Sports & Events Authority Advisory Committee",
+      "meetingDate": "2026-09-08T14:00:00Z",
+      "meetingName": "Sports & Events Authority Advisory Committee",
+      "eventId": 1549,
+      "agendaId": 1520,
+      "fileId": 5368,
+      "attachmentId": null,
+      "agendaItemId": null,
+      "agendaItemName": null,
+      "fileName": "September 8, 2026, SEA Advisory Committee Meeting Minutes",
+      "sourceType": "Minutes",
+      "sourcePath": "/v1/Meetings/GetMeetingFileStream(fileId=5368,plainText=false)",
+      "readMethod": "meeting_pdf",
+      "status": "text_extracted",
+      "pageCount": 4,
+      "characters": 8093,
+      "sha256": "fca653e4e72afb50da908ccab8cec5668d6c18e6fe5e9fcdf8c0807079351262",
+      "text": "Sports & Events Authority Advisory Committee\n612 N. Main, City Hall - Council Chambers\nSeptember 8, 2026\n1. Call to Order\nMeeting called to order by: Kevin McCardle at 2:01 PM\nSEA Advisory Committee members present: Mayor Hanson, Kevin McCardle, Jill Larson,\nKevin Nelson, Dave Sietsema, LaRee Rumbolz, Emily Liedtke, Tim Smith, Jim Johnston, Scott\nMorgan\nSEA Advisory Committee members absent: Cory Aadland, Jason Christensen, Dave\nHelleloid\nOthers present: Aaron Hieb and Stephanie Ellwein\n2. Presentation of Funding Applications\nSEA Grant Application presentations by applicants.\nThe SEA Advisory Committee reviewed applications for grant funding.\nThe following applications were presented and considered:\nA. Palace City Pre-Sturgis Party\nDave Sietsema spoke on behalf of and presented the Palace City Pre-Sturgis Party Grant\nApplication, which is requesting $2,500.\n• Dave shared the post-event grant request will be used to cover the additional expenses\nthat the event took on with the opportunity to bring Redferrin to the Party as the main\nconcert headliner. The Palace City Pre-Sturgis Party took place on Thursday, August\n6, 2026, from 5-10 PM on Mitchell Main Street. The event drew upwards of 7,000\npeople to Mitchell Main Street for the Party. Any remaining expenses will be covered\nby the Corn Palace. There is no profit for the event. Each year, the event budget starts\nat $0.\nB. Raise Em Rank Bull Riding Finals Corn Palace Cup\nDillon Swanson spoke on behalf of and presented the Raise Em Rank Bull Riding Finals Corn\nPalace Cup Grant Application, which is requesting $7,500.\n\n--- PAGE 1 OF 4 ---\n\n\n• Dillon shared the Raise Em Rank Bull Riding Series Finals — Corn Palace Cup will\ntake place at The World's Only Corn Palace on October 2–3, 2026 with performances\nstarting at 7 PM until 9:30 PM. The Friday evening performance has generally been\nless attended as they are competing against local/regional high school football games.\nThe Saturday performance estimates around 1,000 in attendance. He shared\nexamples and locations of other performances that took place during their summer tour\nalong with shouting out to his social media pages and followers. The grant request will\ngo towards the rental of the Corn Palace along with hotel fees for staff. Any profits from\nthe event are kept by Raise Em Rank to cover the remainder of the production costs\nfor the event, and assist with future year's events.\n3. Approval of Minutes\nMotion: Motion was made by Jim Johnston to approve the previous meeting minutes as\npresented, and seconded by Tim Smith. All members voted 'Aye' and the motion passed.\n4. Financial Report\nAaron Hieb and Stephanie Ellwein reviewed the financial report as of September 3, 2026.\nCurrent expenses and award checks that have been written for 2026 are $127,700.00.\nCurrent Available Budgeted Balance of $61,490.00.\nCollections in June 2026 for (May 2026 records) are $26,840.00 with (1) establishments past\ndue.\nCollections in July 2026 for (June 2026 records) are $33,940.00 with (1) establishment past\ndue.\nCollections in August 2026 for (July 2026 records) are $32,818.00 with (2) establishments past\ndue.\nAn average from past year's shows that the establishment's past due could account for\napproximately up to 2,000 room nights, once collected.\nThe YTD collections for 2026 are $181,739.00, which equates to 90,870 total room nights\nsold.\nYTD comparisons of room nights sold were: down 8.2% (7,424 room nights) from 2025, down\n4.8% (4,370 room nights) from 2024, down 2.4% (2,156 room nights) from 2023, down 7.0%\nfrom 2022, down 2.9% from 2021, and up 23.7% from 2020.\nEntertainment collections YTD are down as well for Mitchell, SD.\nMotion: Motion was made by Kevin Nelson to approve the financial report as presented, and\nseconded by LaRee Rumbolz. All members voted 'Aye' and the motion passed.\n\n--- PAGE 2 OF 4 ---\n\n\n5. Evaluation Forms/Financials/Surveys\nAaron Hieb reviewed the following Evaluation Form(s) w/Financial(s) with the SEA Committee:\nA. Evaluation Form(s) w/Financial(s)\nMidwest Miracles Basketball Classic (January 3, 2026)\n• The event Exceeded (5) expectations. The Corn Palace was the perfect venue to have\nour Midwest Miracles Classic. Dave was a huge help in making the transition to the\nCorn Palace very easy. The total spectators were 1,800. The total participants were 18\nteams, which came from all over the state of South Dakota. The estimated number of\ntotal hotel room nights was approximately 50. Next year's event will be a two-day event\nat The World's Only Corn Palace on January 1–2, 2027. The funds awarded $5,000\nwere used for donating to pediatric cancer patients and families to assist in their cancer\njourney. The Net Profit of $60,708 goes towards pediatric cancer patients and their\nfamilies along with paying the expenses to continue to run this classic each year going\nforward.\nPalace City Baseball Association summer 2026 recap — SD Class A 13/14U State Baseball\nTournament (July 24-26, 2026)\n• The event Above (4) expectations. The promotional cards with coupons to Bradley's\nand Blarney's seemed to be received well. The total spectators were 650. The total\nparticipants were 10 teams, which came from: Aberdeen, Brandon Valley, Brookings,\nHarrisburg, Huron, Dakota Valley, Pierre, Watertown, Sioux Falls, Yankton. The\nestimated number of total hotel room nights was approximately 52. Next year's event is\nTBD. The funds awarded $2,500 were used to cover some of the umpire costs. The\nNet Profit of $7,184.20 will be used to fund future events/tournaments and facility\nimprovements, particularly at Drake Field. This will help our chances on bids for\nhosting future state tournaments at various age levels and improve the experience for\nplayers and fans.\no Jordan Widstrom and Adam Kaus were present and shared information with the\ncommittee regarding Palace City Baseball Association (3) tournaments they\nheld this summer at Drake Field.\n▪ A 13/14U tournament was held the first weekend of June. A team from\nSioux Falls and Winner participated\n▪ A Legion tournament was held the last weekend of June. Letcher\nparticipated.\n▪ A 13/14U Class A State Baseball Tournament - Recap above.\n6. Other Items\nAaron Hieb shared the following information with the committee.\nA. Upcoming SEA Events\n• Mitchell Area Bass Clef Festival (September 14, 2026)\n\n--- PAGE 3 OF 4 ---\n\n\no Mitchell Performing Arts Center\n• The 301 Rodz & Ridez Car Show (September 18–20, 2026)\no Mitchell Main Street\n• Dakota Oyate Challenge Volleyball (September 18–19, 2026)\no The World’s Only Corn Palace\n• Cornicupia 2026 (September 26-27, 2026)\no Pepsi-Cola Soccer Complex\n• Palace City 8-Ball Open (October 2-4, 2026)\no Highland Conference Center\n• Palace City Kiwanis Half Marathon, 10K, 5K, & Kids Fun Run (October 3–4, 2026)\no The World’s Only Corn Palace\n• South Dakota Parks and Recreation Association Conference (October 6–8, 2026)\no Highland Conference Center\nComplete list of events – MITCHELL CHAMBER EVENTS CALENDAR & Mitchell SD Events\nFacebook\n7. Executive Session in accordance with SDCL 9-34-19: Discussion of confidential trade\nsecrets, commercial, or financial information.\nMotion: Tim Smith made a motion to go into Executive Session at 2:27 PM, and was\nseconded by Jim Johnston. All members voted 'Aye' and the motion passed.\n8. Approval of Funding Applications\nPalace City Pre-Sturgis Party\nDate: August 6, 2026; Contact: Dave Sietsema; Grant Request: $2,500\n• Motion: Motion was made by Tim Smith to award $2,500, and seconded by Jim\nJohnston. (8) members voted 'Aye' and the motion passed.\n• Abstain: Dave Sietsema abstained from voting.\nRaise Em Rank Bull Riding Finals Corn Palace Cup\nDate: October 2-3, 2026; Contact: Dillon Swanson; Grant Request: $7,500\n• Motion: Motion was made by Emily Liedtke to award $5,000, and seconded by LaRee\nRumbolz. All members voted 'Aye' and the motion passed.\n9. Next Meeting Date\nKevin McCardle shared the next meeting date of Tuesday, October 13, 2026, at 2 PM — City\nHall, Council Chambers.\n10. Adjournment\nMeeting adjourned by: Kevin McCardle at 2:51 PM\n\n--- PAGE 4 OF 4 ---",
+      "error": null,
+      "plainTextError": null
     },
     {
       "id": "1549:attachment:11124",
