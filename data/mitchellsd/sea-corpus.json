@@ -9,16 +9,16 @@
   },
   "stats": {
     "meetings": 48,
-    "documents": 1254,
-    "minutesDocuments": 45,
+    "documents": 1255,
+    "minutesDocuments": 46,
     "attachmentDocuments": 1209,
-    "textDocuments": 1054,
+    "textDocuments": 1055,
     "visualRequired": 200,
     "readFailed": 0,
-    "minutesTextExtracted": 45,
+    "minutesTextExtracted": 46,
     "minutesVisualRequired": 0,
     "minutesReadFailed": 0,
-    "minutesBinaryFallback": 2,
+    "minutesBinaryFallback": 3,
     "years": {
       "2023": {
         "meetings": 12,
@@ -58,15 +58,15 @@
       },
       "2026": {
         "meetings": 12,
-        "documents": 306,
-        "textDocuments": 273,
+        "documents": 307,
+        "textDocuments": 274,
         "visualRequired": 33,
         "readFailed": 0,
-        "minutesPublished": 9,
-        "minutesTextExtracted": 9,
+        "minutesPublished": 10,
+        "minutesTextExtracted": 10,
         "minutesVisualRequired": 0,
         "minutesReadFailed": 0,
-        "minutesBinaryFallback": 2
+        "minutesBinaryFallback": 3
       }
     }
   },
@@ -1023,16 +1023,17 @@
       "name": "Sports & Events Authority Advisory Committee",
       "categoryId": 42,
       "categoryName": "Sports & Events Authority Advisory Committee",
-      "minutesFileId": null,
+      "minutesFileId": 5430,
       "publishedFileIds": [
         5418,
-        5420
+        5420,
+        5430
       ],
       "agendaItemCount": 16,
       "attachmentCount": 31,
       "agendaStatus": "available",
-      "minutesStatus": "not_published",
-      "minutesReadMethod": null,
+      "minutesStatus": "text_extracted",
+      "minutesReadMethod": "meeting_pdf",
       "agendaError": null,
       "minutesError": null
     },
@@ -30468,6 +30469,31 @@
       "sha256": "94084db60402676a5747ac33bc2ca5ff1d585c5dc19baf916a5e8504bff3eca9",
       "text": "2026 SD Class A 13/14U State Baseball Tournament\nDrake Field, Mitchell, SD\nJuly 24-26, 2026\nAdmission: Friday Cash $2,590.00\nAdmission: Saturday Cash $1,825.00\nAdmission: Sunday Cash $915.00\nAdmission: Venmo $838.90\nConcessions: Cash $2,956.50\nConcessions: Venmo $206.70\nSD Class A $3,500.00\nTotal Revenue $12,832.10\nUmpires $4,480.00\nConcession Operators $1,000.00\nScoreboard Operators $60.00\nIce $107.90\nTotal Expenses $5,647.90\nProfit $7,184.20\n\n--- PAGE 1 OF 1 ---",
       "error": null
+    },
+    {
+      "id": "1565:meeting-file:5430",
+      "kind": "minutes",
+      "tenant": "mitchellsd",
+      "body": "Sports & Events Authority Advisory Committee",
+      "meetingDate": "2026-10-13T14:00:00Z",
+      "meetingName": "Sports & Events Authority Advisory Committee",
+      "eventId": 1565,
+      "agendaId": 1532,
+      "fileId": 5430,
+      "attachmentId": null,
+      "agendaItemId": null,
+      "agendaItemName": null,
+      "fileName": "October 13, 2026, SEA Advisory Committee Meeting Minutes",
+      "sourceType": "Minutes",
+      "sourcePath": "/v1/Meetings/GetMeetingFileStream(fileId=5430,plainText=false)",
+      "readMethod": "meeting_pdf",
+      "status": "text_extracted",
+      "pageCount": 5,
+      "characters": 10059,
+      "sha256": "0561269e681f099558873443e5bcd989cdf98809f460d586a571377056b68d33",
+      "text": "Sports & Events Authority Advisory Committee\n612 N. Main, City Hall - Council Chambers\nOctober 13, 2026\n1. Call to Order\nMeeting called to order by: Kevin McCardle at 2:01 PM\nSEA Advisory Committee members present: Kevin McCardle, Jill Larson, Kevin Nelson,\nJason Christensen, Dave Sietsema, LaRee Rumbolz, Emily Liedtke, Tim Smith, Jim Johnston\nSEA Advisory Committee members absent: Mayor Hanson, Cory Aadland, Dave Helleloid,\nScott Morgan\nOthers present: Aaron Hieb and Stephanie Ellwein\n2. Presentation of Funding Applications\nSEA Grant Application presentations by applicants.\nThe SEA Advisory Committee reviewed applications for grant funding.\nThe following applications were presented and considered:\nA. Pheasants Forever Banquet\nKevin Bruscher spoke on behalf of and presented the Pheasants Forever Banquet Grant\nApplication, which is requesting $2,500.\n• Kevin shared that this is the largest Pheasants Forever Banquet in the country and that\nthey had almost sold out of the 750 tickets. The banquet is Friday, October 16, 2026, at\nThe World's Only Corn Palace. Kevin also shared the costs and described some of the\nhabitat improvements that the Pheasant Country, Chapter 872 led during the year. The\ngrant request will go towards youth hunting experiences and activities throughout the\nMitchell area.\nB. American Outlaws Wrestling Monster Brawl & Open\nJD Heinrich spoke on behalf of and presented the American Outlaws Wrestling Monster Brawl\n& Open Grant Application, which is requesting $ Any Amount is Appreciated.\n• JD shared that this year's event will take place at the Davison County Fairgrounds on\nNovember 14–15, 2026. Last year they had 254 participants and are hoping for 300\n\n--- PAGE 1 OF 5 ---\n\n\nentries this year. The event will feature age groups 6U through 14U — High School —\nSeniors — Masters — Grand Masters - Elite. The grant request will go towards\npurchasing their concession items, which are all purchased locally at Coborn's and\nCounty Fair. Profit and proceeds from the event will go back into their program and\ncontinue promoting youth wrestling in the area.\nC. Dakota Riptide Winter Meet & Sprint Meet\nJason Wede & Kelly Pfeifer spoke on behalf of and presented the Dakota Riptide Winter Meet\n& Sprint Meet Grant Application, which is requesting $5,000.\n• Jason and Kelly shared that the (2) Dakota Riptide swim meets will take place on\nDecember 4–6, 2026, and January 16–17, 2027, at the Mitchell Indoor Aquatic Center.\nThey also shared that the Dakota Riptide had made the final payment towards their\ndebt service, which is paid. They updated the committee that the Dakota Riptide has\n90 swimmers within their club and that 70 of them are from Mitchell. The grant request\nwill go towards covering expenses to host the (2) meets. Any profit/proceeds will go\nback to the club and cover pool rental, coaches salaries, and other expenses\nthroughout the year.\nD. SDSU Extension: South Dakota Agritourism Workshop\nKara Harders attended via conference phone and spoke on behalf of and presented the SDSU\nExtension: South Dakota Agritourism Workshop Grant Application, which is requesting $2,000.\n• Kara shared that this is the fourth year of the bi-annual conference taking place on\nFebruary 9-10, 2027, at The World's Only Corn Palace. Past years the conference has\nbeen hosted in: Yankton (2024), Sturgis (2022), and Pierre (2020). The target audience\nfor the workshop are agricultural producers, rural entrepreneurs, and value-added food\nor farm-based business owners who are interested in bringing new visitors and\neconomic activity into their community. The workshop in 2024 secured 55 hotel\nbookings. The grant request will go towards facility rental costs. The event does not\ngenerate or intended to produce a profit.\n3. Approval of Minutes\nMotion: Motion was made by Dave Sietsema to approve the previous meeting minutes as\npresented, and seconded by Tim Smith. All members voted 'Aye' and the motion passed.\n4. Financial Report\nAaron Hieb reviewed the financial report as of October 2, 2026.\nCurrent expenses and award checks that have been written for 2026 are $135,200.00.\nCurrent Available Budgeted Balance of $53,990.00.\n\n--- PAGE 2 OF 5 ---\n\n\nCollections in June 2026 for (May 2026 records) are $27,710.00 with all collected.\nCollections in July 2026 for (June 2026 records) are $35,202.00 with all collected.\nCollections in August 2026 for (July 2026 records) are $34,744.00 with (1) establishments past\ndue.\nCollections in September 2026 for (August 2026 records) are $34,324.00 with (1)\nestablishment past due.\nThe same establishment is past due and, if collected, would account for very minimal room\nnights.\nThe YTD collections for 2026 are $220,121.00, which equates to 110,061 total room nights\nsold.\nYTD comparisons of room nights sold were: down 6.1% (6,700 room nights) from 2025, down\n4.1% (4,497 room nights) from 2024, down 1.2% (1,323 room nights) from 2023, down 5.5%\nfrom 2022, down 3.1% from 2021, and up 21.9% from 2020.\nMotion: Motion was made by Tim Smith to approve the financial report as presented, and\nseconded by Jim Johnston. All members voted 'Aye' and the motion passed.\n5. Evaluation Forms/Financials/Surveys\nAaron Hieb reviewed the following Evaluation Form(s) w/Financial(s) with the SEA Committee:\nA. Evaluation Form(s) w/Financials(s)\nKiwanis Youth Baseball Tournament (June 6, 2026)\n• The event Exceeded (5) expectations. The total spectators were 700. The total\nparticipants were 22 teams. The estimated number of total hotel room nights was\napproximately 15. We did not contact hotels. The funds awarded $1,000 were used for\numpire and field rental fees. The Net Profit of $8,884.41 goes towards half the\nproceeds towards Palace City Baseball, half to Kiwanis — youth projects like 4H, youth\nsports, SnackPack, BFLF, Caring Closet, SafePlace, Food Pantry and more.\nPHRR Outlaw Gauntlet Shoots (June 10-14, 2026)\n• The event was Above (4) expectations. The total spectators were 125+. The total\nparticipants were 74. The estimated number of total hotel room nights was\napproximately 118. Next year's event will be the same location on June 9-13, 2027.\nThe funds awarded $5,000 were used $3,000 Paybacks to Shooters for SEA Bracket\nMatch and $2,000 used for range improvements (backstops, ect.). The Net Profit of\n$1,530 goes towards general operating expenses.\n\n--- PAGE 3 OF 5 ---\n\n\nPalace City Soccer Cup (June 13-14, 2026)\n• The event was Below (2) expectations. Looking at a different date to get a better\nturnout. The total spectators were 500. The total participants were 20 teams. The\nestimated number of total hotel room nights was approximately 300. Next year's event\nis tentatively scheduled for May 15-16, 2027. The funds awarded $3,500 were used to\noffset tournament costs. The Net Profit of $4,372.41 will go back into the Mitchell\nSoccer Association programs.\nPalace City Mountain Bike Classic (June 20, 2026)\n• The event Exceeded (5) expectations. The total spectators were 81. The total\nparticipants were 63. The estimated number of total hotel room nights was\napproximately 5 with all those at Lake Mitchell Campground, which voluntarily donate\ntheir $2 per campsite per night collections. Next year's event will be June 19, 2027.\nThe funds awarded $1,200 were used towards rider awards and incentives. The Net\nProfit of $2,354.85 goes towards a donation to MAC Area Events to purchase outdoor\nworkout equipment around Cadwell Loop — a project to begin Winter 2026—\npurchasing equipment be end of year 2026.\nSioux Area 4-H Rodeo (June 26-28, 2026)\n• The event Exceeded (5) expectations. Moving to a new location was nerve-wracking,\nbut the HSI arena committee (especially Kris Royalty) was so helpful and made the\ntransition smooth. The total spectators were 500+. The total participants were 267,\nwhich most were from Eastern South Dakota. The estimated number of total hotel\nroom nights was approximately 10. Next year's event will be June 25-27, 2027 at the\nHSI Arena. The funds awarded $2,500 were used for expenses such as stock, judges,\nawards, etc. The Net Profit of $451.15 will be the start of next year's fundraising.\n6. Other Items\nAaron Hieb shared the following information with the committee.\nComplete list of events – MITCHELL CHAMBER EVENTS CALENDAR & Mitchell SD Events\nFacebook\n7. Executive Session in accordance with SDCL 9-34-19: Discussion of confidential trade\nsecrets, commercial, or financial information.\nMotion: Kevin Nelson made a motion to go into Executive Session at 2:30 PM, and was\nseconded by Jason Christensen. All members voted 'Aye' and the motion passed.\n\n--- PAGE 4 OF 5 ---\n\n\n8. Approval of Funding Applications\nPheasants Forever Banquet\nDate: October 16, 2026; Contact: Kevin Bruscher; Grant Request: $2,500\n• Motion: Motion was made by Jim Johnston to award $2,500 earmarked towards \"youth\nhunting activities and experiences within the Mitchell area\", and seconded by Dave\nSietsema. All members voted 'Aye' and the motion passed.\nAmerican Outlaws Wrestling Monster Brawl & Open\nDate: November 14–15, 2026; Contact: JD Heinrich; Grant Request: $ Any Amount\nAppreciated\n• Motion: Motion was made by Tim Smith to award $1,000, and seconded by Kevin\nNelson. All members voted 'Aye' and the motion passed.\nDakota Riptide Winter Meet & Sprint Meet\nDate: December 4–6, 2026 / January 16–17, 2027; Contact: Jason Wede; Grant Request:\n$5,000\n• Motion: Motion was made by Jim Johnston to award $4,000 towards both swim meets,\nand seconded by Emily Liedtke. All members voted 'Aye' and the motion passed.\nSDSU Extension: South Dakota Agritourism Workshop\nDate: February 9-10, 2027; Contact: Kara Harders; Grant Request: $2,000\n• Motion: Motion was made by Jason Christensen to award $2,000, and seconded by\nTim Smith. (8) members voted 'Aye' and the motion passed.\n• Abstain: Dave Sietsema abstained from voting.\n9. Next Meeting Date\nKevin McCardle shared the next meeting date of Tuesday, November 10, 2026, at 2 PM —\nCity Hall, Council Chambers.\n10. Adjournment\nMeeting adjourned by: Kevin McCardle at 2:47 PM\n\n--- PAGE 5 OF 5 ---",
+      "error": null,
+      "plainTextError": null
     },
     {
       "id": "1565:attachment:11144",
